@@ -1,23 +1,14 @@
 package model
 
 import (
-	"database/sql"
 	"fmt"
 	"gorm.io/gorm/schema"
 	"strings"
 	"sync"
-	"time"
 )
 
-type Model struct {
-	Id              int64        `gorm:"column:id"`
-	CreateTime      time.Time    `gorm:"column:create_time;autoCreateTime"`
-	UpdateTime      time.Time    `gorm:"column:update_time;autoUpdateTime"`
-	DeleteTime      sql.NullTime `gorm:"column:delete_time"`
-}
-
 const (
-	FieldNameFormatWithQuote = "`%s`"
+	FieldNameFormatWithQuote       = "`%s`"
 	FieldNameFormatWithPlaceHolder = "`%s` = ?"
 )
 
@@ -38,7 +29,7 @@ func FieldDBNames(dest interface{}, excepts []string) ([]string, error) {
 	for _, field := range s.Fields {
 		var find bool
 		for _, except := range excepts {
-			if find = except == field.DBName; find{
+			if find = except == field.DBName; find {
 				break
 			}
 		}

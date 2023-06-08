@@ -1,0 +1,14 @@
+app:
+  name: auth
+  env: local # local, testing, production
+  debug: true
+database:
+  driver: mysql
+  host: 127.0.0.1
+  port: 3306
+  database: docxlib
+  username: root
+  password: 123456
+jwt:
+  secret:
+  expires-in: 7200 # second

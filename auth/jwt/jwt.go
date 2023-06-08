@@ -2,13 +2,13 @@ package jwt
 
 import (
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/wire"
 	"time"
 )
 
 type Options struct {
 	Secret    string `yaml:"secret"`
-	ExpiresIn int64  `yaml:"expires-in"`
+	Issuer    string `yaml:"issuer"`
+	ExpiresIn int64  `yaml:"expiresIn"`
 }
 
 type AuthUser struct {
@@ -31,17 +31,28 @@ func NewJWTAuth(o *Options) *JWTAuth {
 	}
 }
 
-func (j *JWTAuth) CreateToken(username string) (string, error) {
-	tokenExpireDuration := time.Second * time.Duration(j.Options.ExpiresIn)
+func (j *JWTAuth) CreateClaims(username string) *Claims {
+	ep := time.Second * time.Duration(j.Options.ExpiresIn)
 	// set our claims
-	claims := Claims{
-		username,
-		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenExpireDuration)),
+	return &Claims{
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   username,
+			Issuer:    j.Options.Issuer,
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ep)),
 		},
 	}
+}
+
+func (j *JWTAuth) CreateTokenByClaims(claims jwt.Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(j.Options.Secret))
+}
+
+func (j *JWTAuth) CreateToken(username string) (string, error) {
+	c := j.CreateClaims(username)
+	return j.CreateTokenByClaims(c)
 }
 
 func (j *JWTAuth) ParseToken(tokenString string) (*Claims, error) {
@@ -61,10 +72,8 @@ func (j *JWTAuth) ParseToken(tokenString string) (*Claims, error) {
 
 func (j *JWTAuth) RefreshToken(tokenString string) (string, error) {
 	claims, err := j.ParseToken(tokenString)
-	if err == nil {
-		return j.CreateToken(claims.Username)
+	if err != nil {
+		return "", err
 	}
-	return "", err
+	return j.CreateToken(claims.Username)
 }
-
-var ProviderSet = wire.NewSet(NewJWTAuth)

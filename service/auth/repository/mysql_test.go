@@ -35,7 +35,7 @@ func TestMysqlAuthRepository_Create(t *testing.T) {
 		Username:          "test",
 		Password:          "123456",
 		Email:             "test@test.com",
-		EmailVerifiedTime: "",
+		EmailVerifiedTime: nil,
 		Phone:             "",
 		Status:            0,
 	})

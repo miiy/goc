@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
-	"github.com/miiy/goc/db/gorm"
 	"github.com/miiy/goc/service/auth/entity"
+	"google.golang.org/grpc/grpclog"
+	"gorm.io/gorm"
 )
 
 type mysqlAuthRepository struct {
@@ -19,6 +20,7 @@ func NewAuthRepository(db *gorm.DB) AuthRepository {
 }
 
 func (r *mysqlAuthRepository) Create(ctx context.Context, user *entity.User) error {
+	grpclog.Info(user)
 	err := r.db.WithContext(ctx).Create(&user).Error
 	if err != nil {
 		return err
@@ -57,7 +59,7 @@ func (r *mysqlAuthRepository) FirstByUsername(ctx context.Context, username stri
 
 func (r *mysqlAuthRepository) UserExist(ctx context.Context, column, value string) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Where(fmt.Sprintf("%s=?", column), value).Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&entity.User{}).Where(fmt.Sprintf("%s=?", column), value).Count(&count).Error
 	if err != nil {
 		return false, err
 	}

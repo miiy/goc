@@ -8,7 +8,6 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"gorm.io/gorm/schema"
 	"log"
 	"os"
 	"time"
@@ -102,12 +101,12 @@ func NewDatabase(c Config, opts ...Option) (*Database, error) {
 			Conn: db,
 		}), &gorm.Config{
 			Logger: newLogger,
-			NamingStrategy: schema.NamingStrategy{
-				TablePrefix:   "",
-				SingularTable: true,
-				NameReplacer:  nil,
-				NoLowerCase:   false,
-			},
+			//NamingStrategy: schema.NamingStrategy{
+			//	TablePrefix:   "",
+			//	SingularTable: true,
+			//	NameReplacer:  nil,
+			//	NoLowerCase:   false,
+			//},
 		})
 		if err != nil {
 			return nil, err

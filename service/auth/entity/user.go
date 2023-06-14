@@ -1,6 +1,9 @@
 package entity
 
-import "github.com/miiy/goc/db/gorm"
+import (
+	"github.com/miiy/goc/db"
+	"github.com/miiy/goc/db/gorm"
+)
 
 const (
 	UserColumnUsername = "username"
@@ -13,7 +16,7 @@ type User struct {
 	Username          string
 	Password          string
 	Email             string
-	EmailVerifiedTime string
+	EmailVerifiedTime *db.JSONTime
 	Phone             string
 	Status            int64
 }

@@ -20,6 +20,7 @@ type Logger interface {
 	DPanic(msg string, fields ...Field)
 	Panic(msg string, fields ...Field)
 	Fatal(msg string, fields ...Field)
+	ZapLogger() *zap.Logger
 }
 
 type ZapLogger struct {
@@ -40,7 +41,7 @@ var (
 	Fatal  = logger.Fatal
 )
 
-func NewLogger(opts ...Option) (*ZapLogger, error) {
+func NewLogger(opts ...Option) (Logger, error) {
 	logger = &ZapLogger{
 		Level:            InfoLevel,
 		OutputPaths:      []string{"stderr"},
@@ -67,6 +68,10 @@ func NewLogger(opts ...Option) (*ZapLogger, error) {
 
 func Default() *ZapLogger {
 	return logger
+}
+
+func (log *ZapLogger) ZapLogger() *zap.Logger {
+	return logger.Logger
 }
 
 func (log *ZapLogger) Debug(msg string, fields ...Field) {

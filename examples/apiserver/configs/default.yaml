@@ -1,0 +1,24 @@
+app:
+  name: goc
+  env: local # local, testing, production
+  debug: true
+database:
+  driver: mysql
+  host: 127.0.0.1
+  port: 3306
+  database: goc
+  username: root
+  password: 123456
+redis:
+  addrs:
+    - 127.0.0.1:6379
+  password:
+  db: 0
+server:
+  http:
+    addr: 0.0.0.0:8051
+  grpc:
+    addr: 0.0.0.0:50051
+jwt:
+  secret: 123456
+  expiresIn: 7200 # second 7200s = 2h

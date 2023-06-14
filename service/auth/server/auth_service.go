@@ -22,7 +22,6 @@ type AuthServiceServer struct {
 	repo      repository.AuthRepository
 	tokenRepo repository.AuthTokenRepository
 	jwtAuth   *jwt.JWTAuth
-	logger    grpclog.LoggerV2
 	pb.UnimplementedAuthServiceServer
 }
 
@@ -41,11 +40,11 @@ var (
 	ErrWrongPassword = errors.New("wrong password")
 )
 
-func NewAuthServiceServer(repo repository.AuthRepository, jwtAuth *jwt.JWTAuth, logger grpclog.LoggerV2) pb.AuthServiceServer {
+func NewAuthServiceServer(repo repository.AuthRepository, tokenRepo repository.AuthTokenRepository, jwtAuth *jwt.JWTAuth) pb.AuthServiceServer {
 	return &AuthServiceServer{
-		repo:    repo,
-		jwtAuth: jwtAuth,
-		logger:  logger,
+		repo:      repo,
+		tokenRepo: tokenRepo,
+		jwtAuth:   jwtAuth,
 	}
 }
 
@@ -56,6 +55,7 @@ func (s *AuthServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 
 	exist, err := s.repo.UserExist(ctx, entity.UserColumnUsername, req.Username)
 	if err != nil {
+		grpclog.Errorln(err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if exist {
@@ -64,7 +64,7 @@ func (s *AuthServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 
 	hashPasswd, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		s.logger.Errorln(err)
+		grpclog.Errorln(err)
 		return nil, err
 	}
 
@@ -72,7 +72,7 @@ func (s *AuthServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 		Username:          req.Username,
 		Password:          string(hashPasswd),
 		Email:             req.Email,
-		EmailVerifiedTime: "",
+		EmailVerifiedTime: nil,
 		Phone:             "",
 		Status:            0,
 	}
@@ -80,6 +80,7 @@ func (s *AuthServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 	// register
 	err = s.repo.Create(ctx, &user)
 	if err != nil {
+		grpclog.Errorln(err)
 		return nil, err
 	}
 
@@ -124,7 +125,7 @@ func (s *AuthServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 		if err == sql.ErrNoRows {
 			return nil, ErrUserNotFound
 		}
-		s.logger.Error(err)
+		grpclog.Error(err)
 		return nil, err
 	}
 
@@ -140,7 +141,7 @@ func (s *AuthServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 	}
 
 	// store token
-	err = s.tokenRepo.Set(ctx, formatTokenKey(token), token, time.Duration(s.jwtAuth.Options.ExpiresIn))
+	err = s.tokenRepo.Set(ctx, formatTokenKey(token), token, time.Second*time.Duration(s.jwtAuth.Options.ExpiresIn))
 	if err != nil {
 		return nil, err
 	}
@@ -214,5 +215,5 @@ func (s *AuthServiceServer) Logout(ctx context.Context, req *pb.LogoutRequest) (
 }
 
 func formatTokenKey(token string) string {
-	return fmt.Sprintf(AuthTokenKey, md5.Sum([]byte(token)))
+	return fmt.Sprintf(AuthTokenKey, fmt.Sprintf("%x", md5.Sum([]byte(token))))
 }

@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/miiy/goc/auth/jwt"
+	"github.com/miiy/goc/db/gorm"
 	pb "github.com/miiy/goc/service/auth/api/v1"
 	"github.com/miiy/goc/service/auth/entity"
 	"github.com/miiy/goc/service/auth/repository"
+	"github.com/miiy/goc/wechat/miniprogram"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -22,6 +24,7 @@ type AuthServiceServer struct {
 	repo      repository.AuthRepository
 	tokenRepo repository.AuthTokenRepository
 	jwtAuth   *jwt.JWTAuth
+	mp        *miniprogram.MiniProgram
 	pb.UnimplementedAuthServiceServer
 }
 
@@ -40,7 +43,7 @@ var (
 	ErrWrongPassword = errors.New("wrong password")
 )
 
-func NewAuthServiceServer(repo repository.AuthRepository, tokenRepo repository.AuthTokenRepository, jwtAuth *jwt.JWTAuth) pb.AuthServiceServer {
+func NewAuthServiceServer(repo repository.AuthRepository, tokenRepo repository.AuthTokenRepository, jwtAuth *jwt.JWTAuth, mp *miniprogram.MiniProgram) pb.AuthServiceServer {
 	return &AuthServiceServer{
 		repo:      repo,
 		tokenRepo: tokenRepo,
@@ -154,6 +157,61 @@ func (s *AuthServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 			Username: user.Username,
 		},
 	}, nil
+}
+
+func (s *AuthServiceServer) MpLogin(ctx context.Context, req *pb.MpLoginRequest) (*pb.LoginResponse, error) {
+	if req.Code == "" {
+		return nil, status.New(codes.InvalidArgument, "code can not empty").Err()
+	}
+
+	// get openid
+	res, err := s.mp.Code2Session(ctx, req.Code)
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.repo.FirstByUsername(ctx, res.OpenID)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		grpclog.Error(err)
+		return nil, err
+	}
+	if err == gorm.ErrRecordNotFound {
+		u := entity.User{
+			Username:          "wx_" + res.OpenID,
+			Password:          "",
+			Email:             "",
+			EmailVerifiedTime: nil,
+			Phone:             "",
+			Status:            0,
+		}
+
+		err = s.repo.Create(ctx, &u)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	claims := s.jwtAuth.CreateClaims(user.Username)
+	token, err := s.jwtAuth.CreateTokenByClaims(claims)
+	if err != nil {
+		return nil, err
+	}
+
+	// store token
+	err = s.tokenRepo.Set(ctx, formatTokenKey(token), token, time.Second*time.Duration(s.jwtAuth.Options.ExpiresIn))
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.LoginResponse{
+		TokenType:   "Bearer",
+		AccessToken: token,
+		ExpiresAt:   timestamppb.New(claims.ExpiresAt.Time),
+		User: &pb.AuthenticatedUser{
+			Username: user.Username,
+		},
+	}, nil
+
 }
 
 // VerifyToken

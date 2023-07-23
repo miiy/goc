@@ -50,6 +50,11 @@ message LoginResponse {
   AuthenticatedUser user = 4;
 }
 
+message MpLoginRequest {
+  string code = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+
 // verify token
 message VerifyTokenRequest {
   string access_token = 1 [(google.api.field_behavior) = REQUIRED];
@@ -111,6 +116,13 @@ service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse) {
     option (google.api.http) = {
       post: "/api/v1/auth/login",
+      body: "*"
+    };
+  }
+
+  rpc MpLogin(MpLoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/mplogin",
       body: "*"
     };
   }

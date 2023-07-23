@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `users`
     `email`             varchar(255)    NOT NULL DEFAULT '',
     `email_verified_time` timestamp        NULL     DEFAULT NULL,
     `phone`             varchar(255)    NOT NULL DEFAULT '',
+    `mp_openid`         varchar(255)    NOT NULL DEFAULT '',
     `status`            tinyint(1)      NOT NULL DEFAULT 0 COMMENT 'status:0 default, 1 active, 2 disable',
     `create_time`        timestamp       NULL     DEFAULT NULL,
     `update_time`        timestamp       NULL     DEFAULT NULL,

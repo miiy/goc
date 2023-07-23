@@ -18,5 +18,6 @@ type User struct {
 	Email             string
 	EmailVerifiedTime *db.JSONTime
 	Phone             string
+	MpOpenid          string
 	Status            int64
 }

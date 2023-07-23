@@ -32,7 +32,7 @@ type gRPCServer struct {
 
 type ServerOption = grpc.ServerOption
 
-func NewServer(ctx context.Context) (Server, error) {
+func NewServer(ctx context.Context, matcher selector.Matcher) (Server, error) {
 	// Setup custom auth.
 	authFn := func(ctx context.Context) (context.Context, error) {
 		token, err := auth.AuthFromMD(ctx, "bearer")
@@ -55,11 +55,11 @@ func NewServer(ctx context.Context) (Server, error) {
 
 	grpcSrv := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFn), selector.MatchFunc(authMatcher)),
+			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFn), matcher),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 		grpc.ChainStreamInterceptor(
-			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFn), selector.MatchFunc(authMatcher)),
+			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFn), matcher),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 	)
@@ -80,6 +80,8 @@ func authMatcher(ctx context.Context, c interceptors.CallMeta) bool {
 	for _, v := range []string{"Login", "Register", "UsernameCheck", "EmailCheck", "PhoneCheck"} {
 		fullMethodNames = append(fullMethodNames, fmt.Sprintf("/%s/%s", authpb.AuthService_ServiceDesc.ServiceName, v))
 	}
+	// avatar service
+
 	for _, v := range fullMethodNames {
 		if c.FullMethod() == v {
 			return false

@@ -57,6 +57,18 @@ func (r *mysqlAuthRepository) FirstByUsername(ctx context.Context, username stri
 	return &item, nil
 }
 
+func (r *mysqlAuthRepository) FirstByMpOpenid(ctx context.Context, openid string, columns ...string) (*entity.User, error) {
+	var item entity.User
+	err := r.db.WithContext(ctx).Select(columns).Where("mp_openid=?", openid).First(&item).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	return &item, nil
+}
+
 func (r *mysqlAuthRepository) UserExist(ctx context.Context, column, value string) (bool, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&entity.User{}).Where(fmt.Sprintf("%s=?", column), value).Count(&count).Error

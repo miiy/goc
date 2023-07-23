@@ -11,6 +11,7 @@ type AuthRepository interface {
 	Update(ctx context.Context, id uint64, user *entity.User, columns ...string) (rowsAffected int64, err error)
 	First(ctx context.Context, id uint64, columns ...string) (*entity.User, error)
 	FirstByUsername(ctx context.Context, username string, columns ...string) (*entity.User, error)
+	FirstByMpOpenid(ctx context.Context, openid string, columns ...string) (*entity.User, error)
 	UserExist(ctx context.Context, column, value string) (bool, error)
 }
 

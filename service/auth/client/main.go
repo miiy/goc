@@ -75,3 +75,7 @@ func callLogin(client pb.AuthServiceClient, req *pb.LoginRequest) (*pb.LoginResp
 	defer cancel()
 	return client.Login(ctx, req)
 }
+
+func callWxLogin() {
+
+}

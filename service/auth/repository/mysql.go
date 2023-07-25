@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/miiy/goc/service/auth/entity"
-	"google.golang.org/grpc/grpclog"
 	"gorm.io/gorm"
 )
 
@@ -20,7 +19,6 @@ func NewAuthRepository(db *gorm.DB) AuthRepository {
 }
 
 func (r *mysqlAuthRepository) Create(ctx context.Context, user *entity.User) error {
-	grpclog.Info(user)
 	err := r.db.WithContext(ctx).Create(&user).Error
 	if err != nil {
 		return err

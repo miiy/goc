@@ -7,6 +7,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
+	"github.com/miiy/goc/auth/jwt"
 	authpb "github.com/miiy/goc/service/auth/api/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -32,17 +33,18 @@ type gRPCServer struct {
 
 type ServerOption = grpc.ServerOption
 
-func NewServer(ctx context.Context, matcher selector.Matcher) (Server, error) {
+func NewServer(ctx context.Context, matcher selector.Matcher, jwtAuth *jwt.JWTAuth) (Server, error) {
 	// Setup custom auth.
 	authFn := func(ctx context.Context) (context.Context, error) {
 		token, err := auth.AuthFromMD(ctx, "bearer")
 		if err != nil {
 			return nil, err
 		}
-		// TODO: This is example only, perform proper Oauth/OIDC verification!
-		if token != "yolo" {
+		claims, err := jwtAuth.ParseToken(token)
+		if err != nil {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid auth token")
 		}
+		fmt.Println(claims.Username)
 		// NOTE: You can also pass the token in the context for further interceptors or gRPC service code.
 		return ctx, nil
 	}

@@ -48,6 +48,7 @@ func NewAuthServiceServer(repo repository.AuthRepository, tokenRepo repository.A
 		repo:      repo,
 		tokenRepo: tokenRepo,
 		jwtAuth:   jwtAuth,
+		mp:        mp,
 	}
 }
 
@@ -77,7 +78,7 @@ func (s *AuthServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 		Email:             req.Email,
 		EmailVerifiedTime: nil,
 		Phone:             "",
-		Status:            0,
+		Status:            entity.UserStatusActive,
 	}
 
 	// register
@@ -160,8 +161,8 @@ func (s *AuthServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 }
 
 func (s *AuthServiceServer) MpLogin(ctx context.Context, req *pb.MpLoginRequest) (*pb.LoginResponse, error) {
-	if req.Code == "" {
-		return nil, status.New(codes.InvalidArgument, "code can not empty").Err()
+	if err := mpLoginValidate(req); err != nil {
+		return nil, err
 	}
 
 	// get openid
@@ -169,28 +170,35 @@ func (s *AuthServiceServer) MpLogin(ctx context.Context, req *pb.MpLoginRequest)
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.repo.FirstByUsername(ctx, res.OpenID)
+
+	var user *entity.User
+	// get user by openid
+	user, err = s.repo.FirstByMpOpenid(ctx, res.OpenID)
 	if err != nil && err != gorm.ErrRecordNotFound {
-		grpclog.Error(err)
 		return nil, err
 	}
+	// if not found, create user
 	if err == gorm.ErrRecordNotFound {
-		u := entity.User{
-			Username:          "wx_" + res.OpenID,
+		user = &entity.User{
+			Username:          "",
 			Password:          "",
 			Email:             "",
 			EmailVerifiedTime: nil,
 			Phone:             "",
-			Status:            0,
+			Unionid:           res.UnionID,
+			MpOpenid:          res.OpenID,
+			MpSessionKey:      res.SessionKey,
+			Status:            entity.UserStatusActive,
 		}
 
-		err = s.repo.Create(ctx, &u)
+		err = s.repo.Create(ctx, user)
 		if err != nil {
 			return nil, err
 		}
 
 	}
 
+	// create jwt token
 	claims := s.jwtAuth.CreateClaims(user.Username)
 	token, err := s.jwtAuth.CreateTokenByClaims(claims)
 	if err != nil {

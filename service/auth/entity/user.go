@@ -18,6 +18,13 @@ type User struct {
 	Email             string
 	EmailVerifiedTime *db.JSONTime
 	Phone             string
+	Unionid           string
 	MpOpenid          string
+	MpSessionKey      string
 	Status            int64
 }
+
+const (
+	UserStatusActive   = 1
+	UserStatusDisabled = 2
+)

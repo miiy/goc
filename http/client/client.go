@@ -13,6 +13,7 @@ import (
 type Client interface {
 	Get(url string, params map[string]string, headers map[string]string) (*http.Response, error)
 	Post(url string, body io.Reader, headers map[string]string) (*http.Response, error)
+	Put(url string, body io.Reader, headers map[string]string) (*http.Response, error)
 }
 
 type httpClient struct {
@@ -82,7 +83,15 @@ func (c *httpClient) Get(url string, params map[string]string, headers map[strin
 }
 
 func (c *httpClient) Post(url string, body io.Reader, headers map[string]string) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodPost, url, body)
+	return c.do(http.MethodPost, url, body, headers)
+}
+
+func (c *httpClient) Put(url string, body io.Reader, headers map[string]string) (*http.Response, error) {
+	return c.do(http.MethodPut, url, body, headers)
+}
+
+func (c *httpClient) do(method string, url string, body io.Reader, headers map[string]string) (*http.Response, error) {
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, err
 	}

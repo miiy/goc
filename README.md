@@ -22,4 +22,10 @@ git clone https://github.com/googleapis/googleapis.git --depth 1
 		--go-grpc_out ./service/auth/api/v1 --go-grpc_opt paths=source_relative \
 		--grpc-gateway_out ./service/auth/api/v1 --grpc-gateway_opt paths=source_relative \
 		./service/auth/api/v1/auth.proto
+	protoc -I ./service/file/api/v1 \
+		-I ./third_party/googleapis \
+		--go_out ./service/file/api/v1 --go_opt paths=source_relative \
+		--go-grpc_out ./service/file/api/v1 --go-grpc_opt paths=source_relative \
+		--grpc-gateway_out ./service/file/api/v1 --grpc-gateway_opt paths=source_relative \
+		./service/file/api/v1/file.proto
 ```

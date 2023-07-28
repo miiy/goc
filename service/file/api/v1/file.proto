@@ -27,8 +27,8 @@ message File {
     FileTypeOther = 4;
   }
   int64 id = 1;
-  int64 sys = 2;
-  int64 type = 3;
+  int64 sys_id = 2;
+  int64 cat_id = 3;
   int64 item_id = 4;
   int64 user_id = 5;
   FileType file_type = 6;
@@ -64,8 +64,8 @@ message DeleteFileRequest {
 }
 
 message ListFilesRequest {
-  string sys = 1;
-  int64 type = 2;
+  int64 sys_id = 1;
+  int64 cat_id = 2;
   int64 page = 3;
   int64 page_size = 4;
 }

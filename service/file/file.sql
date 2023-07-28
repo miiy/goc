@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS `files`
 (
     `id`          bigint unsigned NOT NULL AUTO_INCREMENT,
-    `sys`         tinyint         NOT NULL DEFAULT 0 comment '',
-    `type`        tinyint         NOT NULL DEFAULT 0 comment '',
+    `sys_id`         tinyint         NOT NULL DEFAULT 0 comment '',
+    `cat_id`        tinyint         NOT NULL DEFAULT 0 comment '',
     `item_id`     bigint unsigned NOT NULL DEFAULT 0,
     `user_id`     bigint unsigned NOT NULL DEFAULT 0,
     `file_type`   tinyint         NOT NULL DEFAULT 0 comment 'type: 0 default, 1 image, 2 video, 3 doc, 4 other',

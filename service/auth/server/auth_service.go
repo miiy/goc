@@ -180,7 +180,7 @@ func (s *AuthServiceServer) MpLogin(ctx context.Context, req *pb.MpLoginRequest)
 	// if not found, create user
 	if err == gorm.ErrRecordNotFound {
 		user = &entity.User{
-			Username:          "",
+			Username:          randUserName(),
 			Password:          "",
 			Email:             "",
 			EmailVerifiedTime: nil,
@@ -282,4 +282,8 @@ func (s *AuthServiceServer) Logout(ctx context.Context, req *pb.LogoutRequest) (
 
 func formatTokenKey(token string) string {
 	return fmt.Sprintf(AuthTokenKey, fmt.Sprintf("%x", md5.Sum([]byte(token))))
+}
+
+func randUserName() string {
+	return fmt.Sprintf("用户_%d", time.Now().Unix())
 }

@@ -33,14 +33,16 @@ func NewJWTAuth(o *Options) *JWTAuth {
 
 func (j *JWTAuth) CreateClaims(username string) *Claims {
 	ep := time.Second * time.Duration(j.Options.ExpiresIn)
-	// set our claims
+	now := time.Now()
+	// set claims
 	return &Claims{
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   username,
 			Issuer:    j.Options.Issuer,
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ep)),
+			Subject:   username,
+			NotBefore: jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ep)),
+			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
 }

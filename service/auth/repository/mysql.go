@@ -35,9 +35,6 @@ func (r *mysqlAuthRepository) First(ctx context.Context, id uint64, columns ...s
 	var user entity.User
 	err := r.db.WithContext(ctx).Select(columns).First(&user, id).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, gorm.ErrRecordNotFound
-		}
 		return nil, err
 	}
 	return &user, nil
@@ -47,9 +44,6 @@ func (r *mysqlAuthRepository) FirstByUsername(ctx context.Context, username stri
 	var item entity.User
 	err := r.db.WithContext(ctx).Select(columns).Where("username=?", username).First(&item).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, gorm.ErrRecordNotFound
-		}
 		return nil, err
 	}
 	return &item, nil

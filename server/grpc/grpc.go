@@ -9,6 +9,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	"github.com/miiy/goc/auth/jwt"
 	authpb "github.com/miiy/goc/service/auth/api/v1"
+	"github.com/miiy/goc/service/auth/repository"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -33,7 +34,7 @@ type gRPCServer struct {
 
 type ServerOption = grpc.ServerOption
 
-func NewServer(ctx context.Context, matcher selector.Matcher, jwtAuth *jwt.JWTAuth) (Server, error) {
+func NewServer(ctx context.Context, matcher selector.Matcher, jwtAuth *jwt.JWTAuth, arepo repository.AuthRepository) (Server, error) {
 	// Setup custom auth.
 	authFn := func(ctx context.Context) (context.Context, error) {
 		token, err := auth.AuthFromMD(ctx, "bearer")
@@ -44,9 +45,20 @@ func NewServer(ctx context.Context, matcher selector.Matcher, jwtAuth *jwt.JWTAu
 		if err != nil {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid auth token")
 		}
-		fmt.Println(claims.Username)
+
+		user, err := arepo.FirstByUsername(ctx, claims.Username)
+		if err != nil {
+			return nil, status.Errorf(codes.Unauthenticated, "invalid auth token")
+		}
+		authUser := jwt.AuthUser{
+			Id:       user.Id,
+			Username: claims.Username,
+		}
+
+		// WARNING: in production define your own type to avoid context collisions
+		newCtx := context.WithValue(ctx, "auth.user", authUser)
 		// NOTE: You can also pass the token in the context for further interceptors or gRPC service code.
-		return ctx, nil
+		return newCtx, nil
 	}
 
 	// Define customfunc to handle panic

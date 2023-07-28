@@ -10,37 +10,24 @@ type FileRepositoryImpl struct {
 	db *gorm.DB
 }
 
-type FileRepository interface {
-	CreateFile(ctx context.Context, file *File) (*File, error)
-	UpdateFile(ctx context.Context, id int64, file *File, selects interface{}) (int64, error)
-	DeleteFileById(ctx context.Context, id int64) error
-	GetFileById(ctx context.Context, id int64) (*File, error)
-	FindCount(ctx context.Context, scopes ...func(*gorm.DB) *gorm.DB) (int64, error)
-	Find(ctx context.Context, scopes ...func(db *gorm.DB) *gorm.DB) ([]*File, error)
-}
-
 type File struct {
 	gorm.Model
-	Sys      int    `gorm:"column:sys"`
-	Type     int    `gorm:"column:type" json:"type"`
-	UserId   int64  `gorm:"column:user_id"`
-	FileType int    `gorm:"column:file_type"`
-	Name     string `gorm:"column:name"`
-	Ext      string `gorm:"column:ext"`
-	Path     string `gorm:"column:path"`
-	Hash     string `gorm:"column:hash"`
-	Status   int    `gorm:"column:status"`
+	SysId    int64
+	CatId    int64
+	ItemId   int64
+	UserId   int64
+	FileType int
+	Name     string
+	Ext      string
+	Path     string
+	Hash     string
+	Status   int
 }
 
 const (
 	StatusDefault = 0
 	StatusActive  = 1
 	StatusDisable = 2
-)
-
-const (
-	RecommendNo  = 0
-	RecommendYes = 1
 )
 
 var (
@@ -61,9 +48,15 @@ func ScopeOfFileUser(userId int64) func(db *gorm.DB) *gorm.DB {
 	}
 }
 
-func ScopeOfFileCategory(categoryId int64) func(db *gorm.DB) *gorm.DB {
+func ScopeOfFileSys(sys int64) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("category_id = ?", categoryId)
+		return db.Where("sys = ?", sys)
+	}
+}
+
+func ScopeOfFileCat(catId int64) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("cat_id = ?", catId)
 	}
 }
 

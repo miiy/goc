@@ -1,4 +1,6 @@
-package gin
+package server
+
+import "go.uber.org/zap"
 
 // An Option configures a Server.
 type Option interface {
@@ -19,7 +21,14 @@ func WithDebug() Option {
 	})
 }
 
-func WithLogger() Option {
+func WithAddr(addr string) Option {
 	return optionFunc(func(opts *Server) {
+		opts.addr = addr
+	})
+}
+
+func WithLogger(logger *zap.Logger) Option {
+	return optionFunc(func(opts *Server) {
+		opts.logger = logger
 	})
 }

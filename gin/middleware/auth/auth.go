@@ -1,12 +1,6 @@
-package middleware
+package auth
 
-import (
-	"github.com/gin-gonic/gin"
-	"github.com/miiy/goc/auth/jwt"
-	"log"
-	"net/http"
-)
-
+/*
 func JWTAuthenticationMiddleware(jwtAuth *jwt.JWTAuth) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		token, err := jwt.HeaderToken(ctx.Request)
@@ -29,3 +23,4 @@ func JWTAuthenticationMiddleware(jwtAuth *jwt.JWTAuth) gin.HandlerFunc {
 		ctx.Next()
 	}
 }
+*/

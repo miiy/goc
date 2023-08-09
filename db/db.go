@@ -13,11 +13,10 @@ import (
 	"time"
 )
 
-type GormDB = gorm.DB
-
-type Database struct {
-	DB   *sql.DB
-	Gorm *gorm.DB
+type DB struct {
+	opts options
+	db   *sql.DB
+	gorm *gorm.DB
 }
 
 type Config struct {
@@ -29,47 +28,9 @@ type Config struct {
 	Database string
 }
 
-type Options struct {
-	ConnMaxLifetime time.Duration
-	MaxIdleConns    int
-	MaxOpenConns    int
-}
-
-type Option func(*Options)
-
-var defaultOption = Options{
-	ConnMaxLifetime: time.Minute * 3,
-	MaxIdleConns:    10,
-	MaxOpenConns:    100,
-}
-
-var (
-	ErrRecordNotFound = gorm.ErrRecordNotFound
-	ErrCreateError    = errors.New("create error")
-	ErrUpdateError    = errors.New("update error")
-)
-
-func WithConnMaxLifetime(t time.Duration) Option {
-	return func(c *Options) {
-		c.ConnMaxLifetime = t
-	}
-}
-
-func WithMaxIdleConns(n int) Option {
-	return func(c *Options) {
-		c.MaxIdleConns = n
-	}
-}
-
-func WithMaxOpenConns(n int) Option {
-	return func(c *Options) {
-		c.MaxOpenConns = n
-	}
-}
-
-// NewDatabase
+// NewDB
 // dns refer https://github.com/go-sql-driver/mysql for details
-func NewDatabase(c Config, opts ...Option) (*Database, error) {
+func NewDB(c Config, opts ...Option) (*DB, error) {
 	if c.Driver == "mysql" {
 		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local&multiStatements=true", c.Username, c.Password, c.Host, c.Port, c.Database)
 		db, err := sql.Open(c.Driver, dsn)
@@ -77,14 +38,14 @@ func NewDatabase(c Config, opts ...Option) (*Database, error) {
 			return nil, err
 		}
 
-		c := defaultOption
+		dopts := defaultOption
 		for _, o := range opts {
-			o(&c)
+			o.apply(&dopts)
 		}
 
-		db.SetConnMaxLifetime(c.ConnMaxLifetime)
-		db.SetMaxIdleConns(c.MaxIdleConns)
-		db.SetMaxOpenConns(c.MaxOpenConns)
+		db.SetConnMaxLifetime(dopts.connMaxLifetime)
+		db.SetMaxIdleConns(dopts.maxIdleConns)
+		db.SetMaxOpenConns(dopts.maxOpenConns)
 
 		newLogger := logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer（日志输出的目标，前缀和日志包含的内容——译者注）
@@ -112,11 +73,20 @@ func NewDatabase(c Config, opts ...Option) (*Database, error) {
 			return nil, err
 		}
 
-		return &Database{
-			DB:   db,
-			Gorm: gormDB,
+		return &DB{
+			opts: dopts,
+			db:   db,
+			gorm: gormDB,
 		}, nil
 	}
 
 	return nil, errors.New("database: driver not support")
+}
+
+func (db *DB) DB() *sql.DB {
+	return db.db
+}
+
+func (db *DB) Gorm() *gorm.DB {
+	return db.gorm
 }

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
@@ -52,7 +53,7 @@ func (s *Server) RegisterRouter(funcs ...func(r *gin.Engine)) {
 // https://gin-gonic.com/docs/examples/graceful-restart-or-stop/
 func (s *Server) Run(addr ...string) {
 	address := resolveAddress(addr, s.addr)
-	s.logger.Info("Listening and serving HTTP on %s\n", zap.String("address", address))
+	s.logger.Info(fmt.Sprintf("Listening and serving HTTP on %s\n", address))
 
 	srv := &http.Server{
 		Addr:    address,

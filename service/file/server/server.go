@@ -129,7 +129,7 @@ func (s *fileServer) ListFiles(ctx context.Context, request *pb.ListFilesRequest
 
 func fileToProto(v *repository.File) *pb.File {
 	return &pb.File{
-		Id:         v.Id,
+		Id:         v.ID,
 		SysId:      v.SysId,
 		CatId:      v.CatId,
 		ItemId:     v.ItemId,

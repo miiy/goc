@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -16,20 +15,19 @@ import (
 	"runtime/debug"
 )
 
-type Server interface {
-	RegisterService(sd *grpc.ServiceDesc, ss interface{})
-	Serve(address string) error
-}
-
-type gRPCServer struct {
-	context context.Context
-	grpc.ServiceRegistrar
+type Server struct {
 	server *grpc.Server
+	grpc.ServiceRegistrar
 }
 
-type ServerOption = grpc.ServerOption
+func serverOption() []grpc.ServerOption {
+	return []grpc.ServerOption{
+		grpc.UnaryInterceptor(auth.UnaryServerInterceptor(authFn), matcher),
+		grpc.StreamInterceptor(auth.StreamServerInterceptor(authFn), matcher),
+	}
+}
 
-func New(opt ...ServerOption) (Server, error) {
+func NewServer(opt ...grpc.ServerOption) (*Server, error) {
 
 	// Define customfunc to handle panic
 	grpcPanicRecoveryHandler := func(p any) (err error) {
@@ -37,23 +35,23 @@ func New(opt ...ServerOption) (Server, error) {
 		return status.Errorf(codes.Internal, "%s", p)
 	}
 
-	grpcSrv := grpc.NewServer(
+	serverOptions := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
-			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFn), matcher),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 		grpc.ChainStreamInterceptor(
-			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFn), matcher),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
-	)
+	}
 
-	return &gRPCServer{
-		server: grpcSrv,
+	server := grpc.NewServer(append(serverOptions, opt...)...)
+
+	return &Server{
+		server: server,
 	}, nil
 }
 
-func (s *gRPCServer) Serve(address string) error {
+func (s *Server) Serve(ctx context.Context, address string) error {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %s", err)
@@ -69,7 +67,7 @@ func (s *gRPCServer) Serve(address string) error {
 
 			s.server.GracefulStop()
 
-			<-s.context.Done()
+			<-ctx.Done()
 		}
 	}()
 
@@ -77,6 +75,6 @@ func (s *gRPCServer) Serve(address string) error {
 	return s.server.Serve(lis)
 }
 
-func (s *gRPCServer) RegisterService(sd *grpc.ServiceDesc, ss interface{}) {
+func (s *Server) RegisterService(sd *grpc.ServiceDesc, ss interface{}) {
 	s.server.RegisterService(sd, ss)
 }

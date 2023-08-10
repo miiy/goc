@@ -51,7 +51,7 @@ func NewServer(ctx context.Context, matcher selector.Matcher, jwtAuth *jwt.JWTAu
 			return nil, status.Errorf(codes.Unauthenticated, "invalid auth token")
 		}
 		authUser := jwt.AuthUser{
-			Id:       user.Id,
+			Id:       user.ID,
 			Username: claims.Username,
 		}
 

@@ -4,15 +4,12 @@ import (
 	"context"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/miiy/goc/auth/jwt"
+	"github.com/miiy/goc/auth/repository"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-type UserProvider interface {
-	RetrieveByUsername(ctx context.Context, username string) (*jwt.AuthUser, error)
-}
-
-func GrpcAuthenticateInterceptor(j *jwt.JWTAuth, p UserProvider) auth.AuthFunc {
+func GrpcAuthenticateInterceptor(j *jwt.JWTAuth, p repository.AuthenticateRepository) auth.AuthFunc {
 	return func(ctx context.Context) (context.Context, error) {
 		ctx = context.WithValue(ctx, "jwtAuth", j)
 		ctx = context.WithValue(ctx, "authUserProvider", p)
@@ -38,14 +35,14 @@ func GrpcAuthFunc(ctx context.Context) (context.Context, error) {
 
 	//grpc_ctxtags.Extract(ctx).Set("auth.sub", claims)
 
-	aup, ok := ctx.Value("authUserProvider").(UserProvider)
-	user, err := aup.RetrieveByUsername(ctx, claims.Username)
+	aup, ok := ctx.Value("authUserProvider").(repository.AuthenticateRepository)
+	user, err := aup.RetrieveByIdentifier(ctx, "username", claims.Username)
 
 	if err != nil {
 		return nil, status.New(codes.Unauthenticated, err.Error()).Err()
 	}
 	authUser := &jwt.AuthUser{
-		Id:       user.Id,
+		Id:       user.ID,
 		Username: user.Username,
 	}
 

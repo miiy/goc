@@ -11,71 +11,48 @@ type Options struct {
 	ExpiresIn int64  `yaml:"expiresIn"`
 }
 
-type AuthUser struct {
-	Id       int64
-	Username string
-}
-
 type JWTAuth struct {
-	Options *Options
-}
-
-type Claims struct {
-	Username string
-	jwt.RegisteredClaims
+	options *Options
 }
 
 func NewJWTAuth(o *Options) *JWTAuth {
 	return &JWTAuth{
-		Options: o,
+		options: o,
 	}
 }
 
-func (j *JWTAuth) CreateClaims(username string) *Claims {
-	ep := time.Second * time.Duration(j.Options.ExpiresIn)
+func (j *JWTAuth) CreateClaims(subject string) jwt.Claims {
+	ep := time.Second * time.Duration(j.options.ExpiresIn)
 	now := time.Now()
 	// set claims
-	return &Claims{
-		Username: username,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    j.Options.Issuer,
-			Subject:   username,
-			NotBefore: jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(ep)),
-			IssuedAt:  jwt.NewNumericDate(now),
-		},
+	return &jwt.RegisteredClaims{
+		Issuer:    j.options.Issuer,
+		Subject:   subject,
+		NotBefore: jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(ep)),
+		IssuedAt:  jwt.NewNumericDate(now),
 	}
 }
 
 func (j *JWTAuth) CreateTokenByClaims(claims jwt.Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(j.Options.Secret))
+	return token.SignedString(j.options.Secret)
 }
 
-func (j *JWTAuth) CreateToken(username string) (string, error) {
-	c := j.CreateClaims(username)
+func (j *JWTAuth) CreateToken(subject string) (string, error) {
+	c := j.CreateClaims(subject)
 	return j.CreateTokenByClaims(c)
 }
 
-func (j *JWTAuth) ParseToken(tokenString string) (*Claims, error) {
-
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(j.Options.Secret), nil
+func (j *JWTAuth) Parse(tokenString string) (jwt.Claims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(j.options.Secret), nil
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
+	if token.Valid {
+		return token.Claims, nil
 	}
 	return nil, jwt.ErrTokenMalformed
-}
-
-func (j *JWTAuth) RefreshToken(tokenString string) (string, error) {
-	claims, err := j.ParseToken(tokenString)
-	if err != nil {
-		return "", err
-	}
-	return j.CreateToken(claims.Username)
 }

@@ -5,11 +5,6 @@ import (
 	"github.com/miiy/goc/db/gorm"
 )
 
-type AuthenticatedUser struct {
-	ID       int64
-	Username string
-}
-
 type User struct {
 	gorm.Model
 	Username          string

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -20,32 +21,26 @@ type Server struct {
 	grpc.ServiceRegistrar
 }
 
-func serverOption() []grpc.ServerOption {
-	return []grpc.ServerOption{
-		grpc.UnaryInterceptor(auth.UnaryServerInterceptor(authFn), matcher),
-		grpc.StreamInterceptor(auth.StreamServerInterceptor(authFn), matcher),
-	}
-}
-
-func NewServer(opt ...grpc.ServerOption) (*Server, error) {
-
+func DefaultServerOption() []grpc.ServerOption {
 	// Define customfunc to handle panic
 	grpcPanicRecoveryHandler := func(p any) (err error) {
 		grpclog.Error("msg", "recovered from panic", "panic", p, "stack", debug.Stack())
 		return status.Errorf(codes.Internal, "%s", p)
 	}
-
-	serverOptions := []grpc.ServerOption{
+	return []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
+			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFn), matcher),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 		grpc.ChainStreamInterceptor(
+			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFn), matcher),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 	}
+}
 
-	server := grpc.NewServer(append(serverOptions, opt...)...)
-
+func NewServer(opt ...grpc.ServerOption) (*Server, error) {
+	server := grpc.NewServer(opt...)
 	return &Server{
 		server: server,
 	}, nil

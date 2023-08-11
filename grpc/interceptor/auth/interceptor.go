@@ -46,7 +46,7 @@ func valid(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	aup, ok := ctx.Value("authUserProvider").(repository.AuthenticateRepository)
+	aup, ok := ctx.Value("authUserProvider").(repository.AuthUserRepository)
 	user, err := aup.RetrieveByIdentifier(ctx, "username", claims.Username)
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (w *wrappedStream) Context() context.Context {
 	return w.ctx
 }
 
-//func GrpcAuthenticateInterceptor(j *jwt.JWTAuth, p repository.AuthenticateRepository) auth.AuthFunc {
+//func GrpcAuthenticateInterceptor(j *jwt.JWTAuth, p repository.AuthUserRepository) auth.AuthFunc {
 //	return func(ctx context.Context) (context.Context, error) {
 //		ctx = context.WithValue(ctx, "jwtAuth", j)
 //		ctx = context.WithValue(ctx, "authUserProvider", p)

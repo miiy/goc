@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
-	"github.com/miiy/goc/auth/jwt"
+	gauth "github.com/miiy/goc/auth"
 	authpb "github.com/miiy/goc/service/auth/api/v1"
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -18,23 +18,30 @@ func authFn(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	claims, err := jwtAuth.ParseToken(token)
+
+	jwtAuth, err := gauth.ExtractJWTAuth(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "extract jwt.JWTAuth error: %v", err)
+	}
+	claims, err := jwtAuth.Parse(token)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "invalid auth token: %v", err)
+	}
+	subject, err := claims.GetSubject()
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "invalid auth token: %v", err)
+	}
+
+	userProvider, err := gauth.ExtractUserProvider(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "extract auth.userProvider error: %v", err)
+	}
+	user, err := userProvider.FirstByIdentifier(ctx, subject)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "invalid auth token")
 	}
 
-	user, err := arepo.FirstByUsername(ctx, claims.Username)
-	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid auth token")
-	}
-	authUser := jwt.AuthUser{
-		Id:       user.ID,
-		Username: claims.Username,
-	}
-
-	// WARNING: in production define your own type to avoid context collisions
-	newCtx := context.WithValue(ctx, "auth.user", authUser)
-	// NOTE: You can also pass the token in the context for further interceptors or gRPC service code.
+	newCtx := gauth.InjectAuthenticatedUser(ctx, user)
 	return newCtx, nil
 }
 

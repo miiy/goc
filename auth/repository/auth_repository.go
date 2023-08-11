@@ -77,3 +77,15 @@ func (r *authRepository) UserExist(ctx context.Context, column, value string) (b
 	}
 	return count > 0, nil
 }
+
+func (r *authRepository) FirstByIdentifier(ctx context.Context, identifier string) (*auth.AuthenticatedUser, error) {
+	var user auth.User
+	err := r.db.WithContext(ctx).Where("username=?", identifier).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &auth.AuthenticatedUser{
+		ID:       user.ID,
+		Username: user.Username,
+	}, nil
+}

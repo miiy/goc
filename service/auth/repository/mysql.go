@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"github.com/miiy/goc/auth"
 	"github.com/miiy/goc/service/auth/entity"
 	"gorm.io/gorm"
 )
@@ -68,4 +69,16 @@ func (r *mysqlAuthRepository) UserExist(ctx context.Context, column, value strin
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (r *mysqlAuthRepository) FirstByIdentifier(ctx context.Context, identifier string) (*auth.AuthenticatedUser, error) {
+	var user entity.User
+	err := r.db.WithContext(ctx).Where("username=?", identifier).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &auth.AuthenticatedUser{
+		ID:       user.ID,
+		Username: user.Username,
+	}, nil
 }

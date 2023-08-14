@@ -26,7 +26,7 @@ type Server struct {
 	grpc.ServiceRegistrar
 }
 
-func DefaultServerOption(logger *zap.Logger, authMatcher selector.Matcher) []grpc.ServerOption {
+func DefaultServerOption(logger *zap.Logger, authFunc auth.AuthFunc, authMatcher selector.Matcher) []grpc.ServerOption {
 	// Define customfunc to handle panic
 	grpcPanicRecoveryHandler := func(p any) (err error) {
 		grpclog.Error("msg", "recovered from panic", "panic", p, "stack", debug.Stack())
@@ -40,13 +40,13 @@ func DefaultServerOption(logger *zap.Logger, authMatcher selector.Matcher) []grp
 	return []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			// Order matters e.g. tracing interceptor have to create span first for the later exemplars to work.
-			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFn), authMatcher),
+			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFunc), authMatcher),
 			logging.UnaryServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 		grpc.ChainStreamInterceptor(
 			otelgrpc.StreamServerInterceptor(),
-			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFn), authMatcher),
+			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFunc), authMatcher),
 			logging.StreamServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),

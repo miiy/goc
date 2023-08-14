@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"github.com/miiy/goc/auth"
 	"github.com/miiy/goc/service/auth/entity"
 	"time"
 )
@@ -13,6 +14,7 @@ type AuthRepository interface {
 	FirstByUsername(ctx context.Context, username string, columns ...string) (*entity.User, error)
 	FirstByMpOpenid(ctx context.Context, openid string, columns ...string) (*entity.User, error)
 	UserExist(ctx context.Context, column, value string) (bool, error)
+	FirstByIdentifier(ctx context.Context, identifier string) (*auth.AuthenticatedUser, error)
 }
 
 type AuthTokenRepository interface {

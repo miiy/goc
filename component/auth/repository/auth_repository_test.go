@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/miiy/goc/auth"
+	"github.com/miiy/goc/component/auth/entity"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"testing"
@@ -31,7 +31,7 @@ func TestMysqlAuthRepository_Create(t *testing.T) {
 	mock.ExpectCommit()
 
 	repo := NewAuthRepository(db)
-	err = repo.Create(context.Background(), &auth.User{
+	err = repo.Create(context.Background(), &entity.User{
 		Username:          "test",
 		Password:          "123456",
 		Email:             "test@test.com",

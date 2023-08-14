@@ -36,7 +36,7 @@ func (j *JWTAuth) CreateClaims(subject string) jwt.Claims {
 
 func (j *JWTAuth) CreateTokenByClaims(claims jwt.Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(j.options.Secret)
+	return token.SignedString([]byte(j.options.Secret))
 }
 
 func (j *JWTAuth) CreateToken(subject string) (string, error) {

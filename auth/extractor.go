@@ -10,6 +10,10 @@ const JWTAuthContextKey = "jwt.JWTAuth"
 const AuthenticatedUserContextKey = "auth.authenticatedUser"
 const UserProviderContextKey = "auth.userProvider"
 
+func InjectJWTAuth(ctx context.Context, jwt *jwt.JWTAuth) context.Context {
+	return context.WithValue(ctx, JWTAuthContextKey, jwt)
+}
+
 func ExtractJWTAuth(ctx context.Context) (*jwt.JWTAuth, error) {
 	j, ok := ctx.Value(JWTAuthContextKey).(*jwt.JWTAuth)
 	if !ok {
@@ -28,6 +32,10 @@ func ExtractAuthenticatedUser(ctx context.Context) (*AuthenticatedUser, error) {
 		return nil, errors.New("extract auth.AuthenticatedUser error")
 	}
 	return u, nil
+}
+
+func InjectUserProvider(ctx context.Context, up UserProvider) context.Context {
+	return context.WithValue(ctx, UserProviderContextKey, up)
 }
 
 func ExtractUserProvider(ctx context.Context) (UserProvider, error) {

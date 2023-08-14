@@ -4,8 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
+	loggerpkg "github.com/miiy/goc/grpc/interceptor/logger"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -21,19 +26,28 @@ type Server struct {
 	grpc.ServiceRegistrar
 }
 
-func DefaultServerOption() []grpc.ServerOption {
+func DefaultServerOption(logger *zap.Logger, authMatcher selector.Matcher) []grpc.ServerOption {
 	// Define customfunc to handle panic
 	grpcPanicRecoveryHandler := func(p any) (err error) {
 		grpclog.Error("msg", "recovered from panic", "panic", p, "stack", debug.Stack())
 		return status.Errorf(codes.Internal, "%s", p)
 	}
+
+	loggerOpts := []logging.Option{
+		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall),
+		// Add any other option (check functions starting with logging.With).
+	}
 	return []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
-			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFn), matcher),
+			// Order matters e.g. tracing interceptor have to create span first for the later exemplars to work.
+			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFn), authMatcher),
+			logging.UnaryServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 		grpc.ChainStreamInterceptor(
-			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFn), matcher),
+			otelgrpc.StreamServerInterceptor(),
+			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFn), authMatcher),
+			logging.StreamServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 	}

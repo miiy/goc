@@ -144,8 +144,13 @@ func (s *AuthServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 		return nil, err
 	}
 
+	expTime, err := claims.GetExpirationTime()
+	if err != nil {
+		return nil, err
+	}
+
 	// store token
-	err = s.tokenRepo.Set(ctx, formatTokenKey(token), token, time.Second*time.Duration(s.jwtAuth.Options.ExpiresIn))
+	err = s.tokenRepo.Set(ctx, formatTokenKey(token), token, time.Now().Sub(expTime.Time))
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +158,7 @@ func (s *AuthServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 	return &pb.LoginResponse{
 		TokenType:   "Bearer",
 		AccessToken: token,
-		ExpiresAt:   timestamppb.New(claims.ExpiresAt.Time),
+		ExpiresAt:   timestamppb.New(expTime.Time),
 		User: &pb.AuthenticatedUser{
 			Username: user.Username,
 		},
@@ -205,8 +210,13 @@ func (s *AuthServiceServer) MpLogin(ctx context.Context, req *pb.MpLoginRequest)
 		return nil, err
 	}
 
+	expTime, err := claims.GetExpirationTime()
+	if err != nil {
+		return nil, err
+	}
+
 	// store token
-	err = s.tokenRepo.Set(ctx, formatTokenKey(token), token, time.Second*time.Duration(s.jwtAuth.Options.ExpiresIn))
+	err = s.tokenRepo.Set(ctx, formatTokenKey(token), token, time.Now().Sub(expTime.Time))
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +224,7 @@ func (s *AuthServiceServer) MpLogin(ctx context.Context, req *pb.MpLoginRequest)
 	return &pb.LoginResponse{
 		TokenType:   "Bearer",
 		AccessToken: token,
-		ExpiresAt:   timestamppb.New(claims.ExpiresAt.Time),
+		ExpiresAt:   timestamppb.New(expTime.Time),
 		User: &pb.AuthenticatedUser{
 			Username: user.Username,
 		},
@@ -229,14 +239,18 @@ func (s *AuthServiceServer) VerifyToken(ctx context.Context, req *pb.VerifyToken
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	claims, err := s.jwtAuth.ParseToken(req.AccessToken)
+	claims, err := s.jwtAuth.Parse(req.AccessToken)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
+	subject, err := claims.GetSubject()
+	if err != nil {
+		return nil, err
+	}
 	return &pb.VerifyTokenResponse{
 		User: &pb.AuthenticatedUser{
-			Username: claims.Username,
+			Username: subject,
 		},
 	}, nil
 }
@@ -247,7 +261,7 @@ func (s *AuthServiceServer) VerifyToken(ctx context.Context, req *pb.VerifyToken
 // 3. create new token
 func (s *AuthServiceServer) RefreshToken(ctx context.Context, request *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
 	// validate old token and create new token
-	oldClaims, err := s.jwtAuth.ParseToken(request.AccessToken)
+	oldClaims, err := s.jwtAuth.Parse(request.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -257,16 +271,25 @@ func (s *AuthServiceServer) RefreshToken(ctx context.Context, request *pb.Refres
 		return nil, err
 	}
 	// create new token
-	claims := s.jwtAuth.CreateClaims(oldClaims.Username)
+	subject, err := oldClaims.GetSubject()
+	if err != nil {
+		return nil, err
+	}
+	claims := s.jwtAuth.CreateClaims(subject)
 	token, err := s.jwtAuth.CreateTokenByClaims(claims)
+	if err != nil {
+		return nil, err
+	}
+
+	expTime, err := claims.GetExpirationTime()
 	if err != nil {
 		return nil, err
 	}
 	return &pb.RefreshTokenResponse{
 		TokenType:   "Bearer",
 		AccessToken: token,
-		ExpiresAt:   timestamppb.New(claims.ExpiresAt.Time),
-		User:        &pb.AuthenticatedUser{Username: claims.Username},
+		ExpiresAt:   timestamppb.New(expTime.Time),
+		User:        &pb.AuthenticatedUser{Username: subject},
 	}, nil
 }
 

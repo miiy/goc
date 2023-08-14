@@ -3,8 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
-	"github.com/miiy/goc/auth/jwt"
-	"github.com/miiy/goc/auth/repository"
+	"github.com/miiy/goc/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -37,17 +36,21 @@ func valid(ctx context.Context) (context.Context, error) {
 	// here forgoes any of the usual OAuth2 token validation and instead checks
 	// for a token matching an arbitrary string.
 
-	jwtAuth, ok := ctx.Value("jwtAuth").(*jwt.JWTAuth)
-	if !ok {
-		return nil, errors.New("jwtAuth from context error")
+	jwtAuth, err := auth.ExtractJWTAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
-	claims, err := jwtAuth.ParseToken(token)
+	claims, err := jwtAuth.Parse(token)
+	if err != nil {
+		return nil, err
+	}
+	subject, err := claims.GetSubject()
 	if err != nil {
 		return nil, err
 	}
 
-	aup, ok := ctx.Value("authUserProvider").(repository.AuthUserRepository)
-	user, err := aup.RetrieveByIdentifier(ctx, "username", claims.Username)
+	userProvider, err := auth.ExtractUserProvider(ctx)
+	user, err := userProvider.FirstByIdentifier(ctx, subject)
 	if err != nil {
 		return nil, err
 	}
@@ -102,11 +105,3 @@ type wrappedStream struct {
 func (w *wrappedStream) Context() context.Context {
 	return w.ctx
 }
-
-//func GrpcAuthenticateInterceptor(j *jwt.JWTAuth, p repository.AuthUserRepository) auth.AuthFunc {
-//	return func(ctx context.Context) (context.Context, error) {
-//		ctx = context.WithValue(ctx, "jwtAuth", j)
-//		ctx = context.WithValue(ctx, "authUserProvider", p)
-//		return GrpcAuthFunc(ctx)
-//	}
-//}

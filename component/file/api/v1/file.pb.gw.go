@@ -286,7 +286,7 @@ func RegisterFileServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/file.FileService/CreateFile", runtime.WithHTTPPathPattern("/api/v1/files"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/goc.user.api.v1.FileService/CreateFile", runtime.WithHTTPPathPattern("/api/v1/files"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -310,7 +310,7 @@ func RegisterFileServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/file.FileService/GetFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/goc.user.api.v1.FileService/GetFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -334,7 +334,7 @@ func RegisterFileServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/file.FileService/UpdateFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/goc.user.api.v1.FileService/UpdateFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -358,7 +358,7 @@ func RegisterFileServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/file.FileService/DeleteFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/goc.user.api.v1.FileService/DeleteFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -382,7 +382,7 @@ func RegisterFileServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/file.FileService/ListFiles", runtime.WithHTTPPathPattern("/api/v1/files"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/goc.user.api.v1.FileService/ListFiles", runtime.WithHTTPPathPattern("/api/v1/files"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -445,7 +445,7 @@ func RegisterFileServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/file.FileService/CreateFile", runtime.WithHTTPPathPattern("/api/v1/files"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/goc.user.api.v1.FileService/CreateFile", runtime.WithHTTPPathPattern("/api/v1/files"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -466,7 +466,7 @@ func RegisterFileServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/file.FileService/GetFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/goc.user.api.v1.FileService/GetFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -487,7 +487,7 @@ func RegisterFileServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/file.FileService/UpdateFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/goc.user.api.v1.FileService/UpdateFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -508,7 +508,7 @@ func RegisterFileServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/file.FileService/DeleteFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/goc.user.api.v1.FileService/DeleteFile", runtime.WithHTTPPathPattern("/api/v1/files/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -529,7 +529,7 @@ func RegisterFileServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/file.FileService/ListFiles", runtime.WithHTTPPathPattern("/api/v1/files"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/goc.user.api.v1.FileService/ListFiles", runtime.WithHTTPPathPattern("/api/v1/files"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return

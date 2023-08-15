@@ -7,7 +7,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	gauth "github.com/miiy/goc/auth"
 	"github.com/miiy/goc/auth/jwt"
-	authpb "github.com/miiy/goc/service/auth/api/v1"
+	authpb "github.com/miiy/goc/component/auth/api/v1"
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
@@ -45,7 +45,7 @@ func authMatchFunc(ctx context.Context, c interceptors.CallMeta) bool {
 	// auth service
 	var fullMethodNames []string
 	for _, v := range []string{"Login", "MpLogin", "Register", "UsernameCheck", "EmailCheck", "PhoneCheck"} {
-		fullMethodNames = append(fullMethodNames, fmt.Sprintf("/%s/%s", authpb.AuthService_ServiceDesc.ServiceName, v))
+		fullMethodNames = append(fullMethodNames, fmt.Sprintf("/%s/%s", authpb.Auth_ServiceDesc.ServiceName, v))
 	}
 
 	for _, v := range fullMethodNames {

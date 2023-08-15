@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
+	authpb "github.com/miiy/goc/component/auth/api/v1"
 	"github.com/miiy/goc/grpc/server"
-	authpb "github.com/miiy/goc/service/auth/api/v1"
 	"go.uber.org/zap/zapgrpc"
 	"google.golang.org/grpc/grpclog"
 )
@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// register service
-	authpb.RegisterAuthServiceServer(s, app.AuthServer())
+	authpb.RegisterAuthServer(s, app.AuthServer())
 
 	// serve
 	if err = s.Serve(ctx, app.Config().Server.Grpc.Addr); err != nil {

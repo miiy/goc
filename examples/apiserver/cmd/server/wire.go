@@ -7,31 +7,36 @@ import (
 	"github.com/google/wire"
 	"github.com/miiy/goc/auth"
 	"github.com/miiy/goc/auth/jwt"
+	authRepo "github.com/miiy/goc/component/auth/repository"
+	authServer "github.com/miiy/goc/component/auth/server"
 	"github.com/miiy/goc/contrib/sdk/wechat/miniprogram"
 	"github.com/miiy/goc/db"
 	"github.com/miiy/goc/examples/apiserver/app"
 	"github.com/miiy/goc/examples/apiserver/config"
 	"github.com/miiy/goc/logger"
 	"github.com/miiy/goc/redis"
-	authRepo "github.com/miiy/goc/service/auth/repository"
-	authServer "github.com/miiy/goc/service/auth/server"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 func initApp(conf string) (*app.App, func(), error) {
 	panic(wire.Build(
 		config.NewConfig,
-		wire.NewSet(logger.NewLogger, providerLoggerOption),
+		wire.NewSet(logger.NewLogger, providerLoggerOption, providerZap),
 		wire.NewSet(db.NewDB, providerDBConfig, providerDBOption, providerGorm),
 		wire.NewSet(redis.NewRedis, providerRedisOptions),
 		wire.NewSet(jwt.NewJWTAuth, providerJwtAuthOptions),
-		wire.NewSet(authRepo.NewAuthRepository, authServer.NewAuthServiceServer, authRepo.NewRedisRepository, providerMiniProgram, providerUser),
+		wire.NewSet(authRepo.NewAuthRepository, authServer.NewAuthServiceServer, authRepo.NewTokenRepository, providerMiniProgram, providerUser),
 		app.NewApp,
 	))
 }
 
 func providerLoggerOption() []logger.Option {
 	return nil
+}
+
+func providerZap(logger logger.Logger) *zap.Logger {
+	return logger.ZapLogger()
 }
 
 func providerDBConfig(config *config.Config) db.Config {

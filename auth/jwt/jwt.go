@@ -6,7 +6,7 @@ import (
 )
 
 type UserClaims struct {
-	Username string
+	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 

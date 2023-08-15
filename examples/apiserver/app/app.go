@@ -3,11 +3,11 @@ package app
 import (
 	"github.com/miiy/goc/auth"
 	"github.com/miiy/goc/auth/jwt"
+	authpb "github.com/miiy/goc/component/auth/api/v1"
 	"github.com/miiy/goc/db"
 	"github.com/miiy/goc/examples/apiserver/config"
 	"github.com/miiy/goc/logger"
 	"github.com/miiy/goc/redis"
-	authpb "github.com/miiy/goc/service/auth/api/v1"
 )
 
 type App struct {
@@ -16,14 +16,14 @@ type App struct {
 	redis        redis.UniversalClient
 	logger       logger.Logger
 	jwtAuth      *jwt.JWTAuth
-	authServer   authpb.AuthServiceServer
+	authServer   authpb.AuthServer
 	userProvider auth.UserProvider
 }
 
 var app *App
 
 func NewApp(c *config.Config, db *db.DB, rdb redis.UniversalClient, l logger.Logger, j *jwt.JWTAuth,
-	as authpb.AuthServiceServer) *App {
+	as authpb.AuthServer) *App {
 	app = &App{
 		config:     c,
 		db:         db,
@@ -55,7 +55,7 @@ func (a *App) JWTAuth() *jwt.JWTAuth {
 	return a.jwtAuth
 }
 
-func (a *App) AuthServer() authpb.AuthServiceServer {
+func (a *App) AuthServer() authpb.AuthServer {
 	return a.authServer
 }
 

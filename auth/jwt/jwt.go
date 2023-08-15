@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+type UserClaims struct {
+	Username string
+	jwt.RegisteredClaims
+}
+
 type Options struct {
 	Secret    string `yaml:"secret"`
 	Issuer    string `yaml:"issuer"`
@@ -21,16 +26,19 @@ func NewJWTAuth(o *Options) *JWTAuth {
 	}
 }
 
-func (j *JWTAuth) CreateClaims(subject string) jwt.Claims {
+func (j *JWTAuth) CreateClaims(username string) *UserClaims {
 	ep := time.Second * time.Duration(j.options.ExpiresIn)
 	now := time.Now()
 	// set claims
-	return &jwt.RegisteredClaims{
-		Issuer:    j.options.Issuer,
-		Subject:   subject,
-		NotBefore: jwt.NewNumericDate(now),
-		ExpiresAt: jwt.NewNumericDate(now.Add(ep)),
-		IssuedAt:  jwt.NewNumericDate(now),
+	return &UserClaims{
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    j.options.Issuer,
+			Subject:   username,
+			NotBefore: jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ep)),
+			IssuedAt:  jwt.NewNumericDate(now),
+		},
 	}
 }
 
@@ -39,20 +47,22 @@ func (j *JWTAuth) CreateTokenByClaims(claims jwt.Claims) (string, error) {
 	return token.SignedString([]byte(j.options.Secret))
 }
 
-func (j *JWTAuth) CreateToken(subject string) (string, error) {
-	c := j.CreateClaims(subject)
+func (j *JWTAuth) CreateToken(username string) (string, error) {
+	c := j.CreateClaims(username)
 	return j.CreateTokenByClaims(c)
 }
 
-func (j *JWTAuth) Parse(tokenString string) (jwt.Claims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+func (j *JWTAuth) ParseToken(tokenString string) (*UserClaims, error) {
+
+	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(j.options.Secret), nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if token.Valid {
-		return token.Claims, nil
+
+	if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
+		return claims, nil
 	}
 	return nil, jwt.ErrTokenMalformed
 }

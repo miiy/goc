@@ -23,3 +23,5 @@ server:
 jwt:
   secret: 123456
   expiresIn: 7200 # second 7200s = 2h
+snowflake:
+  node: 1

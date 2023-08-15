@@ -5,11 +5,12 @@ import (
 )
 
 type Config struct {
-	App      App      `yaml:"app"`
-	Database Database `yaml:"database"`
-	Redis    Redis    `yaml:"redis"`
-	Server   Server   `yaml:"server"`
-	Jwt      Jwt      `yaml:"jwt"`
+	App       App       `yaml:"app"`
+	Database  Database  `yaml:"database"`
+	Redis     Redis     `yaml:"redis"`
+	Server    Server    `yaml:"server"`
+	Jwt       Jwt       `yaml:"jwt"`
+	Snowflake Snowflake `yaml:"snowflake"`
 }
 
 type App struct {
@@ -51,6 +52,10 @@ type ServerHttp struct {
 
 type ServerGrpc struct {
 	Addr string `yaml:"addr"`
+}
+
+type Snowflake struct {
+	Node int64 `yaml:"node"`
 }
 
 var config *Config

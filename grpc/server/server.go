@@ -22,8 +22,8 @@ func NewServer(opt ...grpc.ServerOption) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) Serve(ctx context.Context, address string) error {
-	lis, err := net.Listen("tcp", address)
+func (s *Server) Serve(ctx context.Context, network, address string) error {
+	lis, err := net.Listen(network, address)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %s", err)
 	}

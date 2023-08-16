@@ -40,7 +40,7 @@ func main() {
 	authpb.RegisterAuthServer(s, app.AuthServer())
 
 	// serve
-	if err = s.Serve(ctx, app.Config().Server.Grpc.Addr); err != nil {
+	if err = s.Serve(ctx, "tcp", app.Config().Server.Grpc.Addr); err != nil {
 		grpclog.Fatal("failed to serve: %v", err)
 	}
 }

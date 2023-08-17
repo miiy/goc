@@ -243,7 +243,8 @@ func (s *authServer) MpLogin(ctx context.Context, req *pb.MpLoginRequest) (*pb.L
 
 	// store token
 	expiresTime := claims.ExpiresAt.Time
-	err = s.tokenRepo.Set(ctx, formatTokenKey(token), token, time.Now().Sub(expiresTime))
+	ttl := expiresTime.Sub(time.Now())
+	err = s.tokenRepo.Set(ctx, formatTokenKey(token), token, ttl)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

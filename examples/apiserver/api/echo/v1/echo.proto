@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+option go_package = "github.com/miiy/goc/examples/apiserver/api/echo/v1;echo";
+option java_multiple_files = true;
+option java_outer_classname = "EchoProto";
+option java_package = "com.github.miiy.goc.examples.apiserver.api.echo.v1";
+
+package goc.examples.api.echo.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+message Message {
+  int64 id = 1;
+  string user_name = 2;
+  string message = 3;
+}
+
+message EchoQueryIdRequest {
+  int64 id = 1;
+}
+
+message EchoPostRequest {
+  int64 id = 1;
+  string user_name = 2;
+}
+
+service Echo {
+  rpc EchoGet(google.protobuf.Empty) returns (Message) {
+    option (google.api.http) = {
+      get: "/api/v1/echo"
+    };
+  }
+
+  rpc EchoQueryId(EchoQueryIdRequest) returns (Message) {
+    option (google.api.http) = {
+      get: "/api/v1/echo/{id}"
+    };
+  }
+
+  rpc EchoPost(EchoPostRequest) returns (Message) {
+    option (google.api.http) = {
+      post: "/api/v1/echo",
+      body: "*"
+    };
+  }
+  rpc EchoError(google.protobuf.Empty) returns (Message) {
+    option (google.api.http) = {
+      get: "/api/v1/echo-error",
+    };
+  }
+}

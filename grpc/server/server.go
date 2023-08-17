@@ -10,23 +10,23 @@ import (
 	"os/signal"
 )
 
-type Server struct {
-	server *grpc.Server
-	grpc.ServiceRegistrar
+type Options struct {
+	Network, Addr    string
+	ServerOption     []grpc.ServerOption
+	ServiceRegistrar func(s grpc.ServiceRegistrar)
 }
 
-func NewServer(opt ...grpc.ServerOption) (*Server, error) {
-	server := grpc.NewServer(opt...)
-	return &Server{
-		server: server,
-	}, nil
-}
+type ServiceRegistrar = grpc.ServiceRegistrar
 
-func (s *Server) Serve(ctx context.Context, network, address string) error {
-	lis, err := net.Listen(network, address)
+func Run(ctx context.Context, opts Options) error {
+	server := grpc.NewServer(opts.ServerOption...)
+	lis, err := net.Listen(opts.Network, opts.Addr)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %s", err)
 	}
+
+	// register service
+	opts.ServiceRegistrar(server)
 
 	// graceful shutdown
 	c := make(chan os.Signal, 1)
@@ -36,16 +36,12 @@ func (s *Server) Serve(ctx context.Context, network, address string) error {
 			// sig is a ^C, handle it
 			grpclog.Infoln("shutting down gRPC server...")
 
-			s.server.GracefulStop()
+			server.GracefulStop()
 
 			<-ctx.Done()
 		}
 	}()
 
 	grpclog.Infof("server listening at ", lis.Addr().String())
-	return s.server.Serve(lis)
-}
-
-func (s *Server) RegisterService(sd *grpc.ServiceDesc, ss interface{}) {
-	s.server.RegisterService(sd, ss)
+	return server.Serve(lis)
 }

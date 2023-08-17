@@ -22,24 +22,25 @@ import (
 func initApp(conf string) (*app.App, func(), error) {
 	panic(wire.Build(
 		config.NewConfig,
-		wire.NewSet(logger.NewLogger, providerLoggerOption, providerZap),
-		wire.NewSet(db.NewDB, providerDBConfig, providerDBOption, providerGorm),
-		wire.NewSet(redis.NewRedis, providerRedisOptions),
-		wire.NewSet(jwt.NewJWTAuth, providerJwtAuthOptions),
-		wire.NewSet(authRepo.NewAuthRepository, authServer.NewAuthServiceServer, authRepo.NewTokenRepository, providerMiniProgram, providerUser),
+		wire.NewSet(logger.NewLogger, provideLoggerOption, provideZap),
+		wire.NewSet(db.NewDB, provideDBConfig, provideDBOption, provideGorm),
+		wire.NewSet(redis.NewRedis, provideRedisOptions),
+		wire.NewSet(jwt.NewJWTAuth, provideJwtAuthOptions),
+		wire.NewSet(authRepo.NewAuthRepository, authServer.NewAuthServiceServer, authRepo.NewTokenRepository, provideMiniProgram),
+		wire.Bind(new(auth.UserProvider), new(authRepo.AuthRepository)),
 		app.NewApp,
 	))
 }
 
-func providerLoggerOption() []logger.Option {
+func provideLoggerOption() []logger.Option {
 	return nil
 }
 
-func providerZap(logger logger.Logger) *zap.Logger {
+func provideZap(logger logger.Logger) *zap.Logger {
 	return logger.ZapLogger()
 }
 
-func providerDBConfig(config *config.Config) db.Config {
+func provideDBConfig(config *config.Config) db.Config {
 	return db.Config{
 		Driver:   config.Database.Driver,
 		Host:     config.Database.Host,
@@ -50,11 +51,11 @@ func providerDBConfig(config *config.Config) db.Config {
 	}
 }
 
-func providerDBOption(config *config.Config) []db.Option {
+func provideDBOption(config *config.Config) []db.Option {
 	return nil
 }
 
-func providerRedisOptions(config *config.Config) *redis.Options {
+func provideRedisOptions(config *config.Config) *redis.Options {
 	return &redis.Options{
 		Addrs:    config.Redis.Addrs,
 		Password: config.Redis.Password,
@@ -62,11 +63,11 @@ func providerRedisOptions(config *config.Config) *redis.Options {
 	}
 }
 
-func providerGorm(db *db.DB) *gorm.DB {
+func provideGorm(db *db.DB) *gorm.DB {
 	return db.Gorm()
 }
 
-func providerJwtAuthOptions(config *config.Config) *jwt.Options {
+func provideJwtAuthOptions(config *config.Config) *jwt.Options {
 	return &jwt.Options{
 		Secret:    config.Jwt.Secret,
 		Issuer:    config.Jwt.Issuer,
@@ -74,10 +75,6 @@ func providerJwtAuthOptions(config *config.Config) *jwt.Options {
 	}
 }
 
-func providerMiniProgram(config *config.Config) (*miniprogram.MiniProgram, error) {
+func provideMiniProgram(config *config.Config) (*miniprogram.MiniProgram, error) {
 	return nil, nil
-}
-
-func providerUser(authRepository authRepo.AuthRepository) auth.UserProvider {
-	return authRepository
 }

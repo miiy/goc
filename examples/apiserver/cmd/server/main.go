@@ -5,9 +5,12 @@ import (
 	"flag"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	authpb "github.com/miiy/goc/component/auth/api/v1"
+	echopb "github.com/miiy/goc/examples/apiserver/api/echo/v1"
+	echoSrv "github.com/miiy/goc/examples/apiserver/echo"
 	"github.com/miiy/goc/grpc/server"
 	"go.uber.org/zap/zapgrpc"
 	"google.golang.org/grpc/grpclog"
+	"log"
 )
 
 func main() {
@@ -25,22 +28,24 @@ func main() {
 	logger := app.Logger().ZapLogger()
 	grpclog.SetLoggerV2(zapgrpc.NewLogger(logger))
 
-	// set server
+	// server options
 	serverOpts := server.DefaultServerOption(
 		logger,
 		authFunc(app.JWTAuth(), app.UserProvider()),
 		selector.MatchFunc(authMatchFunc),
 	)
-	s, err := server.NewServer(serverOpts...)
+
+	// run server
+	err = server.Run(ctx, server.Options{
+		Network:      "tcp",
+		Addr:         app.Config().Server.Grpc.Addr,
+		ServerOption: serverOpts,
+		ServiceRegistrar: func(s server.ServiceRegistrar) {
+			authpb.RegisterAuthServer(s, app.AuthServer())
+			echopb.RegisterEchoServer(s, echoSrv.NewEchoServiceServer())
+		},
+	})
 	if err != nil {
-		grpclog.Fatal("Failed to create server", err)
-	}
-
-	// register service
-	authpb.RegisterAuthServer(s, app.AuthServer())
-
-	// serve
-	if err = s.Serve(ctx, "tcp", app.Config().Server.Grpc.Addr); err != nil {
-		grpclog.Fatal("failed to serve: %v", err)
+		log.Fatalf("failed to serve: %v", err)
 	}
 }

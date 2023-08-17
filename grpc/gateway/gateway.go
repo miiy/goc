@@ -3,7 +3,7 @@ package gateway
 import (
 	"context"
 	"github.com/golang/glog"
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"net/http"
 )
@@ -26,18 +26,19 @@ type Options struct {
 	OpenAPIDir string
 
 	// Mux is a list of options to be passed to the gRPC-Gateway multiplexer
-	Mux []gwruntime.ServeMuxOption
+	Mux []runtime.ServeMuxOption
+
+	// RegisterHandler registers the http handlers to "mux".
+	RegisterHandler []RegisterHandler
 }
 
-type Gateway struct {
-	options Options
-}
-
-type GatewayHandler func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error
+// RegisterHandler registers the http handlers to "mux".
+// The handlers forward requests to the grpc endpoint over "conn".
+type RegisterHandler func(context.Context, *runtime.ServeMux, *grpc.ClientConn) error
 
 // Run starts a HTTP server and blocks while running if successful.
 // The server will be shutdown when "ctx" is canceled.
-func Run(ctx context.Context, opts Options, handlers ...GatewayHandler) error {
+func Run(ctx context.Context, opts Options) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -52,32 +53,19 @@ func Run(ctx context.Context, opts Options, handlers ...GatewayHandler) error {
 		}
 	}()
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/openapiv2/", openAPIServer(opts.OpenAPIDir))
-	mux.HandleFunc("/healthz", healthzServer(conn))
+	// Create a mux instance
+	mux := runtime.NewServeMux(opts.Mux...)
 
-	//gw, err := newGateway(ctx, conn, opts.Mux)
-	//if err != nil {
-	//	return err
-	//}
-
-	gwmux := gwruntime.NewServeMux(opts.Mux...)
-
-	// 上传文件
-	gwmux.HandlePath("POST", "/v1/file/upload", handleBinaryFileUpload)
-
-	// Register Greeter
-	for _, f := range handlers {
-		if err = f(ctx, gwmux, conn); err != nil {
+	// Register Handlers
+	for _, f := range opts.RegisterHandler {
+		if err = f(ctx, mux, conn); err != nil {
 			return err
 		}
 	}
 
-	mux.Handle("/", gwmux)
-
 	s := &http.Server{
 		Addr:    opts.Addr,
-		Handler: allowCORS(mux),
+		Handler: mux,
 	}
 	go func() {
 		<-ctx.Done()
@@ -88,9 +76,5 @@ func Run(ctx context.Context, opts Options, handlers ...GatewayHandler) error {
 	}()
 
 	glog.Infof("Starting listening at %s", opts.Addr)
-	if err := s.ListenAndServe(); err != http.ErrServerClosed {
-		glog.Errorf("Failed to listen and serve: %v", err)
-		return err
-	}
-	return nil
+	return s.ListenAndServe()
 }

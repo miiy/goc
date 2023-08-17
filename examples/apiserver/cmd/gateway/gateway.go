@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/golang/glog"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	authpb "github.com/miiy/goc/component/auth/api/v1"
+	echopb "github.com/miiy/goc/examples/apiserver/api/echo/v1"
 	"github.com/miiy/goc/grpc/gateway"
+	"google.golang.org/protobuf/encoding/protojson"
+	"log"
 )
 
 var (
@@ -26,12 +29,35 @@ func main() {
 			Addr:    *endpoint,
 		},
 		OpenAPIDir: *openAPIDir,
+		Mux: []runtime.ServeMuxOption{
+			//gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.JSONPb{
+			//	MarshalOptions: protojson.MarshalOptions{
+			//		EmitUnpopulated: true,
+			//		UseProtoNames:   true,
+			//	},
+			//	UnmarshalOptions: protojson.UnmarshalOptions{
+			//		DiscardUnknown: true,
+			//	},
+			//}),
+			runtime.WithMarshalerOption(runtime.MIMEWildcard, &gateway.CustomMarshaler{
+				Marshaler: &runtime.JSONPb{
+					MarshalOptions: protojson.MarshalOptions{
+						EmitUnpopulated: true,
+						UseProtoNames:   true,
+					},
+					UnmarshalOptions: protojson.UnmarshalOptions{
+						DiscardUnknown: true,
+					},
+				}}),
+		},
+		RegisterHandler: []gateway.RegisterHandler{
+			authpb.RegisterAuthHandler,
+			echopb.RegisterEchoHandler,
+			gateway.RegisterUploadHandler,
+		},
 	}
 
-	handlers := []gateway.GatewayHandler{
-		authpb.RegisterAuthHandler,
-	}
-	if err := gateway.Run(ctx, opts, handlers...); err != nil {
-		glog.Fatal(err)
+	if err := gateway.Run(ctx, opts); err != nil {
+		log.Fatal(err)
 	}
 }

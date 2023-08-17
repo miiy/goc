@@ -23,14 +23,15 @@ type App struct {
 var app *App
 
 func NewApp(c *config.Config, db *db.DB, rdb redis.UniversalClient, l logger.Logger, j *jwt.JWTAuth,
-	as authpb.AuthServer) *App {
+	as authpb.AuthServer, up auth.UserProvider) *App {
 	app = &App{
-		config:     c,
-		db:         db,
-		redis:      rdb,
-		logger:     l,
-		jwtAuth:    j,
-		authServer: as,
+		config:       c,
+		db:           db,
+		redis:        rdb,
+		logger:       l,
+		jwtAuth:      j,
+		authServer:   as,
+		userProvider: up,
 	}
 	return app
 }

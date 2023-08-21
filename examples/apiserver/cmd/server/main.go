@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 	"log"
 )
 
@@ -55,10 +56,11 @@ func main() {
 		Network:      "tcp",
 		Addr:         app.Config().Server.Grpc.Addr,
 		ServerOption: serverOpts,
-		RegisterService: func(s server.ServiceRegistrar) {
+		RegisterService: func(s server.GRPCServer) {
 			healthpb.RegisterHealthServer(s, health.NewServer())
 			authpb.RegisterAuthServer(s, app.AuthServer())
 			echopb.RegisterEchoServer(s, echoSrv.NewEchoServiceServer())
+			reflection.Register(s)
 		},
 	})
 	if err != nil {

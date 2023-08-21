@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -52,6 +53,9 @@ func Ginzap(logger *zap.Logger) gin.HandlerFunc {
 			fields = append(fields, zap.Any("request-header", c.Request.Header))
 
 			// request body
+			if strings.HasPrefix(c.Request.URL.Path, "/uploads/") {
+				return
+			}
 			var body []byte
 			var buf bytes.Buffer
 			tee := io.TeeReader(c.Request.Body, &buf)

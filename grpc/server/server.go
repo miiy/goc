@@ -13,10 +13,13 @@ import (
 type Options struct {
 	Network, Addr   string
 	ServerOption    []grpc.ServerOption
-	RegisterService func(s grpc.ServiceRegistrar)
+	RegisterService func(s GRPCServer)
 }
 
-type ServiceRegistrar = grpc.ServiceRegistrar
+type GRPCServer interface {
+	grpc.ServiceRegistrar
+	GetServiceInfo() map[string]grpc.ServiceInfo
+}
 
 func Run(ctx context.Context, opts Options) error {
 	server := grpc.NewServer(opts.ServerOption...)

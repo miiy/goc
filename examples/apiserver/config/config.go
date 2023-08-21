@@ -5,12 +5,13 @@ import (
 )
 
 type Config struct {
-	App       App       `yaml:"app"`
-	Database  Database  `yaml:"database"`
-	Redis     Redis     `yaml:"redis"`
-	Server    Server    `yaml:"server"`
-	Jwt       Jwt       `yaml:"jwt"`
-	Snowflake Snowflake `yaml:"snowflake"`
+	App        App        `yaml:"app"`
+	Database   Database   `yaml:"database"`
+	Redis      Redis      `yaml:"redis"`
+	Server     Server     `yaml:"server"`
+	GrpcClient GrpcClient `yaml:"grpcClient"`
+	Jwt        Jwt        `yaml:"jwt"`
+	Snowflake  Snowflake  `yaml:"snowflake"`
 }
 
 type App struct {
@@ -51,7 +52,26 @@ type ServerHttp struct {
 }
 
 type ServerGrpc struct {
-	Addr string `yaml:"addr"`
+	Addr string        `yaml:"addr"`
+	Tls  ServerGrpcTLS `yaml:"tls"`
+}
+
+type ServerGrpcTLS struct {
+	CertFile string `yaml:"certFile"`
+	KeyFile  string `yaml:"keyFile"`
+	CaFile   string `yaml:"caFile"`
+}
+
+type GrpcClient struct {
+	Endpoint string        `yaml:"endpoint"`
+	Tls      GrpcClientTLS `yaml:"tls"`
+}
+
+type GrpcClientTLS struct {
+	ServerName string `yaml:"serverName"`
+	CertFile   string `yaml:"certFile"`
+	KeyFile    string `yaml:"keyFile"`
+	CaFile     string `yaml:"caFile"`
 }
 
 type Snowflake struct {

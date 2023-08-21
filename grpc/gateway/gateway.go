@@ -2,15 +2,21 @@ package gateway
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"github.com/golang/glog"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
+	"log"
 	"net/http"
+	"os"
 )
 
 // Endpoint describes a gRPC endpoint
 type Endpoint struct {
-	Network, Addr string
+	Addr string
 }
 
 // Options is a set of options to be passed to Run
@@ -30,6 +36,8 @@ type Options struct {
 
 	// RegisterHandler registers the http handlers to "mux".
 	RegisterHandler []RegisterHandler
+
+	TlsConfig *tls.Config
 }
 
 // RegisterHandler registers the http handlers to "mux".
@@ -42,7 +50,15 @@ func Run(ctx context.Context, opts Options) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := dial(ctx, opts.GRPCServer.Network, opts.GRPCServer.Addr)
+	// tls
+	var creds credentials.TransportCredentials
+	if opts.TlsConfig != nil {
+		creds = credentials.NewTLS(opts.TlsConfig)
+	} else {
+		creds = insecure.NewCredentials()
+	}
+
+	conn, err := grpc.DialContext(ctx, opts.GRPCServer.Addr, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return err
 	}
@@ -77,4 +93,26 @@ func Run(ctx context.Context, opts Options) error {
 
 	glog.Infof("Starting listening at %s", opts.Addr)
 	return s.ListenAndServe()
+}
+
+func MTLSConfig(serverName, certFilePath, keyFilePath, caFilePath string) *tls.Config {
+	cert, err := tls.LoadX509KeyPair(certFilePath, keyFilePath)
+	if err != nil {
+		log.Fatalf("failed to load client cert: %v", err)
+	}
+
+	ca := x509.NewCertPool()
+	caBytes, err := os.ReadFile(caFilePath)
+	if err != nil {
+		log.Fatalf("failed to read ca cert %q: %v", caFilePath, err)
+	}
+	if ok := ca.AppendCertsFromPEM(caBytes); !ok {
+		log.Fatalf("failed to parse %q", caFilePath)
+	}
+
+	return &tls.Config{
+		ServerName:   serverName,
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      ca,
+	}
 }

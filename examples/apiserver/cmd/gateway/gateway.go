@@ -6,29 +6,33 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	authpb "github.com/miiy/goc/component/auth/api/v1"
 	echopb "github.com/miiy/goc/examples/apiserver/api/echo/v1"
+	configpkg "github.com/miiy/goc/examples/apiserver/config"
 	"github.com/miiy/goc/grpc/gateway"
 	"google.golang.org/protobuf/encoding/protojson"
 	"log"
 )
 
 var (
-	endpoint   = flag.String("endpoint", "localhost:50051", "endpoint of the gRPC service")
-	network    = flag.String("network", "tcp", `one of "tcp" or "unix". Must be consistent to -endpoint`)
-	openAPIDir = flag.String("openapi_dir", "examples/internal/proto/examplepb", "path to the directory which contains OpenAPI definitions")
+	conf     = flag.String("c", "./configs/default.yaml", "config file")
+	endpoint = flag.String("endpoint", "localhost:50051", "endpoint of the gRPC service")
 )
 
 func main() {
 	flag.Parse()
+	// conf
+	config, err := configpkg.NewConfig(*conf)
+	if err != nil {
+		panic(err)
+	}
 
 	ctx := context.Background()
 
 	opts := gateway.Options{
-		Addr: ":8080",
+		Addr: config.Server.Http.Addr,
 		GRPCServer: gateway.Endpoint{
-			Network: *network,
-			Addr:    *endpoint,
+			Addr: *endpoint,
 		},
-		OpenAPIDir: *openAPIDir,
+		OpenAPIDir: "",
 		Mux: []runtime.ServeMuxOption{
 			//gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.JSONPb{
 			//	MarshalOptions: protojson.MarshalOptions{
@@ -48,13 +52,21 @@ func main() {
 					UnmarshalOptions: protojson.UnmarshalOptions{
 						DiscardUnknown: true,
 					},
-				}}),
+				},
+			}),
 		},
 		RegisterHandler: []gateway.RegisterHandler{
 			authpb.RegisterAuthHandler,
 			echopb.RegisterEchoHandler,
 			gateway.RegisterUploadHandler,
+			gateway.RegisterHealthzHandler,
 		},
+		TlsConfig: gateway.MTLSConfig(
+			config.GrpcClient.Tls.ServerName,
+			config.GrpcClient.Tls.CertFile,
+			config.GrpcClient.Tls.KeyFile,
+			config.GrpcClient.Tls.CaFile,
+		),
 	}
 
 	if err := gateway.Run(ctx, opts); err != nil {

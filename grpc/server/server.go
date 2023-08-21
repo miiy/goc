@@ -11,9 +11,9 @@ import (
 )
 
 type Options struct {
-	Network, Addr    string
-	ServerOption     []grpc.ServerOption
-	ServiceRegistrar func(s grpc.ServiceRegistrar)
+	Network, Addr   string
+	ServerOption    []grpc.ServerOption
+	RegisterService func(s grpc.ServiceRegistrar)
 }
 
 type ServiceRegistrar = grpc.ServiceRegistrar
@@ -26,7 +26,7 @@ func Run(ctx context.Context, opts Options) error {
 	}
 
 	// register service
-	opts.ServiceRegistrar(server)
+	opts.RegisterService(server)
 
 	// graceful shutdown
 	c := make(chan os.Signal, 1)

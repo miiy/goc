@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/golang/glog"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 )
 
 // openAPIServer returns OpenAPI specification files located under "/openapiv2/"
@@ -56,18 +56,6 @@ func preflightHandler(w http.ResponseWriter, r *http.Request) {
 	glog.Infof("preflight request for %s", r.URL.Path)
 }
 
-// healthzServer returns a simple health handler which returns ok.
-func healthzServer(conn *grpc.ClientConn) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		if s := conn.GetState(); s != connectivity.Ready {
-			http.Error(w, fmt.Sprintf("grpc server is %s", s), http.StatusBadGateway)
-			return
-		}
-		fmt.Fprintln(w, "ok")
-	}
-}
-
 func RegisterUploadHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	err := mux.HandlePath("POST", "/api/v1/file/upload", handleBinaryFileUpload)
 	return err
@@ -95,4 +83,10 @@ func handleBinaryFileUpload(w http.ResponseWriter, r *http.Request, params map[s
 	fileSize := header.Size
 	ext := filepath.Ext(header.Filename)
 	fmt.Println(fileSize, ext, header)
+}
+
+func RegisterHealthzHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	serverMuxOption := runtime.WithHealthzEndpoint(healthpb.NewHealthClient(conn))
+	serverMuxOption(mux)
+	return nil
 }

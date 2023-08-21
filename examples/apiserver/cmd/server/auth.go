@@ -15,7 +15,6 @@ import (
 )
 
 // Setup custom auth.
-
 func authFunc(jwtAuth *jwt.JWTAuth, userProvider gauth.UserProvider) auth.AuthFunc {
 	return func(ctx context.Context) (context.Context, error) {
 		token, err := auth.AuthFromMD(ctx, "bearer")

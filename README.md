@@ -1,11 +1,16 @@
 # goc
 
-goc is a go component library
+goc is the abbreviation for go component, which is a lightweight framework.
+
+## features
 
 * database: gorm
+* redis: go-redis
 * log: zap
-* config: viper
+* config: yaml, viper
 * auth: jwt
+* http: gin
+* rpc: grpc, grpc-gateway
 
 
 ## grpc

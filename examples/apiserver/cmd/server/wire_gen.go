@@ -11,12 +11,12 @@ import (
 	"github.com/miiy/goc/component/auth/server"
 	"github.com/miiy/goc/contrib/sdk/wechat/miniprogram"
 	"github.com/miiy/goc/db"
+	"github.com/miiy/goc/db/gorm"
 	"github.com/miiy/goc/examples/apiserver/app"
 	"github.com/miiy/goc/examples/apiserver/config"
 	"github.com/miiy/goc/logger"
 	"github.com/miiy/goc/redis"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // Injectors from wire.go:

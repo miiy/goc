@@ -15,9 +15,10 @@ type Config struct {
 }
 
 type App struct {
-	Name  string `yaml:"name"`
-	Env   string `yaml:"env"`
-	Debug bool   `yaml:"debug"`
+	Name    string `yaml:"name"`
+	Env     string `yaml:"env"`
+	Debug   bool   `yaml:"debug"`
+	Version string `yaml:"version"`
 }
 
 type Database struct {
@@ -49,6 +50,7 @@ type Server struct {
 
 type ServerHttp struct {
 	Addr string `yaml:"addr"`
+	Url  string `yaml:"url"`
 }
 
 type ServerGrpc struct {

@@ -2,6 +2,7 @@ app:
   name: goc
   env: local # local, testing, production
   debug: true
+  version: 1.0
 database:
   driver: mysql
   host: 127.0.0.1
@@ -18,6 +19,7 @@ redis:
 server:
   http:
     addr: 0.0.0.0:8080
+    url:
   grpc:
     addr: 0.0.0.0:50051
     tls:

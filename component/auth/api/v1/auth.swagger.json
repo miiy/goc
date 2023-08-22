@@ -421,10 +421,7 @@
       "type": "object",
       "properties": {
         "email": {
-          "type": "string",
-          "required": [
-            "email"
-          ]
+          "type": "string"
         },
         "username": {
           "type": "string",
@@ -447,7 +444,6 @@
       },
       "title": "register",
       "required": [
-        "email",
         "username",
         "password",
         "passwordConfirmation"

@@ -10,6 +10,7 @@ package goc.auth.api.v1;
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
+import "buf/validate/validate.proto";
 
 // authenticated user
 message User {
@@ -18,7 +19,7 @@ message User {
 
 // register
 message RegisterRequest {
-  string email = 1 [(google.api.field_behavior) = REQUIRED];
+  string email = 1  [(buf.validate.field).string.min_len = 1];
   string username = 2 [(google.api.field_behavior) = REQUIRED];
   string password = 3 [(google.api.field_behavior) = REQUIRED];
   string password_confirmation = 4 [(google.api.field_behavior) = REQUIRED];

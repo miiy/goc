@@ -6,9 +6,11 @@ import (
 	"crypto/x509"
 	"github.com/golang/glog"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/miiy/goc/resources"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -70,11 +72,21 @@ func Run(ctx context.Context, opts Options) error {
 	}()
 
 	// Create a mux instance
-	mux := runtime.NewServeMux(opts.Mux...)
+	mux := http.NewServeMux()
+
+	subFS, err := fs.Sub(resources.SwaggerUI, "swagger-ui/dist")
+	if err != nil {
+		panic(err)
+	}
+	mux.Handle("/openapiv2/", http.StripPrefix("/openapiv2/", http.FileServer(http.FS(subFS))))
+	// Create a gateway mux instance
+	gwMux := runtime.NewServeMux(opts.Mux...)
+
+	//mux.Handle("/", gwMux)
 
 	// Register Handlers
 	for _, f := range opts.RegisterHandler {
-		if err = f(ctx, mux, conn); err != nil {
+		if err = f(ctx, gwMux, conn); err != nil {
 			return err
 		}
 	}

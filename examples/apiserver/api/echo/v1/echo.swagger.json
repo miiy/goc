@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "echo.proto",
+    "title": "examples/apiserver/api/echo/v1/echo.proto",
     "version": "version not set"
   },
   "tags": [
@@ -145,6 +145,7 @@
         "details": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }

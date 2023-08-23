@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "auth.proto",
+    "title": "component/auth/api/v1/auth.proto",
     "version": "version not set"
   },
   "tags": [
@@ -274,6 +274,15 @@
     }
   },
   "definitions": {
+    "gocauthapiv1User": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        }
+      },
+      "title": "authenticated user"
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -296,6 +305,7 @@
         "details": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }
@@ -305,10 +315,7 @@
       "type": "object",
       "properties": {
         "value": {
-          "type": "string",
-          "required": [
-            "value"
-          ]
+          "type": "string"
         }
       },
       "title": "register check",
@@ -328,16 +335,10 @@
       "type": "object",
       "properties": {
         "username": {
-          "type": "string",
-          "required": [
-            "username"
-          ]
+          "type": "string"
         },
         "password": {
-          "type": "string",
-          "required": [
-            "password"
-          ]
+          "type": "string"
         }
       },
       "title": "login",
@@ -360,7 +361,7 @@
           "format": "date-time"
         },
         "user": {
-          "$ref": "#/definitions/v1User"
+          "$ref": "#/definitions/gocauthapiv1User"
         }
       }
     },
@@ -380,10 +381,7 @@
       "type": "object",
       "properties": {
         "code": {
-          "type": "string",
-          "required": [
-            "code"
-          ]
+          "type": "string"
         }
       },
       "required": [
@@ -413,7 +411,7 @@
           "format": "date-time"
         },
         "user": {
-          "$ref": "#/definitions/v1User"
+          "$ref": "#/definitions/gocauthapiv1User"
         }
       }
     },
@@ -424,22 +422,13 @@
           "type": "string"
         },
         "username": {
-          "type": "string",
-          "required": [
-            "username"
-          ]
+          "type": "string"
         },
         "password": {
-          "type": "string",
-          "required": [
-            "password"
-          ]
+          "type": "string"
         },
         "passwordConfirmation": {
-          "type": "string",
-          "required": [
-            "passwordConfirmation"
-          ]
+          "type": "string"
         }
       },
       "title": "register",
@@ -453,18 +442,9 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/v1User"
+          "$ref": "#/definitions/gocauthapiv1User"
         }
       }
-    },
-    "v1User": {
-      "type": "object",
-      "properties": {
-        "username": {
-          "type": "string"
-        }
-      },
-      "title": "authenticated user"
     }
   }
 }

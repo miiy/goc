@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "file.proto",
+    "title": "component/file/api/v1/file.proto",
     "version": "version not set"
   },
   "tags": [
@@ -134,6 +134,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -194,7 +195,10 @@
                 "updateMask": {
                   "type": "string"
                 }
-              }
+              },
+              "required": [
+                "file"
+              ]
             }
           }
         ],
@@ -247,6 +251,7 @@
         "details": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }
@@ -264,7 +269,10 @@
         "fileId": {
           "type": "string"
         }
-      }
+      },
+      "required": [
+        "file"
+      ]
     },
     "v1File": {
       "type": "object",
@@ -345,6 +353,7 @@
         "files": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/v1File"
           }
         }

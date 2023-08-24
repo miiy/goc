@@ -2,21 +2,21 @@ package server
 
 import (
 	"context"
-	pb "github.com/miiy/goc/examples/apiserver/api/echo/v1"
+	postv1 "github.com/miiy/goc/examples/apiserver/gen/goc/post/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type echoServer struct {
-	pb.UnimplementedEchoServer
+type postServer struct {
+	postv1.UnimplementedPostServiceServer
 }
 
-func NewEchoServiceServer() pb.EchoServer {
-	return &echoServer{}
+func NewPostServiceServer() postv1.PostServiceServer {
+	return &postServer{}
 }
 
-func (s *echoServer) EchoGet(ctx context.Context, req *emptypb.Empty) (*pb.Message, error) {
+func (s *postServer) GetPost(ctx context.Context, req *postv1.GetPostRequest) (*postv1.GetPostResponse, error) {
 	return &pb.Message{
 		Id:       1,
 		UserName: "test",

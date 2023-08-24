@@ -8,7 +8,7 @@ import (
 	gauth "github.com/miiy/goc/auth"
 	"github.com/miiy/goc/auth/jwt"
 	authpb "github.com/miiy/goc/component/auth/api/v1"
-	echopb "github.com/miiy/goc/examples/apiserver/api/echo/v1"
+	postv1 "github.com/miiy/goc/examples/apiserver/gen/goc/post/v1"
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
@@ -41,7 +41,7 @@ func authMatchFunc(ctx context.Context, c interceptors.CallMeta) bool {
 	if healthpb.Health_ServiceDesc.ServiceName == c.Service {
 		return false
 	}
-	if echopb.Echo_ServiceDesc.ServiceName == c.Service {
+	if postv1.PostService_ServiceDesc.ServiceName == c.Service {
 		return false
 	}
 

@@ -5,8 +5,8 @@ import (
 	"flag"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	authpb "github.com/miiy/goc/component/auth/api/v1"
-	echopb "github.com/miiy/goc/examples/apiserver/api/echo/v1"
-	echoSrv "github.com/miiy/goc/examples/apiserver/echo"
+	postv1 "github.com/miiy/goc/examples/apiserver/gen/goc/post/v1"
+	postSrv "github.com/miiy/goc/examples/apiserver/server/post"
 	"github.com/miiy/goc/grpc/server"
 	"go.uber.org/zap/zapgrpc"
 	"google.golang.org/grpc"
@@ -59,7 +59,7 @@ func main() {
 		RegisterService: func(s server.GRPCServer) {
 			healthpb.RegisterHealthServer(s, health.NewServer())
 			authpb.RegisterAuthServer(s, app.AuthServer())
-			echopb.RegisterEchoServer(s, echoSrv.NewEchoServiceServer())
+			postv1.RegisterPostServiceServer(s, postSrv.NewPostServiceServer())
 			reflection.Register(s)
 		},
 	})

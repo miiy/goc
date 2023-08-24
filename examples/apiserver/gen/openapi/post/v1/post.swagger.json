@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "goc/post/v1/article.proto",
+    "title": "post/v1/post.proto",
     "version": "version not set"
   },
   "tags": [

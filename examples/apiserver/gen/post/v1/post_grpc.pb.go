@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             (unknown)
-// source: goc/post/v1/article.proto
+// source: post/v1/post.proto
 
 package postv1
 
@@ -179,5 +179,5 @@ var PostService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "goc/post/v1/article.proto",
+	Metadata: "post/v1/post.proto",
 }

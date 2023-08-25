@@ -40,14 +40,27 @@ go install golang.org/x/tools/cmd/stringer@latest
 go install github.com/bufbuild/buf/cmd/buf@latest
 ```
 
-## doc
+## Docs
 
-https://grpc-ecosystem.github.io/grpc-gateway/
+Protocol Buffers Documentation: <https://protobuf.dev/>
 
-https://cloud.google.com/endpoints/docs/grpc/transcoding?hl=zh-cn
+gRPC-Gateway: <https://grpc-ecosystem.github.io/grpc-gateway/>
 
-https://github.com/bufbuild/protovalidate
+Transcoding HTTP/JSON to gRPC: <https://cloud.google.com/endpoints/docs/grpc/transcoding>
 
+Buf: <https://buf.build/docs/introduction>
+
+protovalidate: <https://github.com/bufbuild/protovalidate>
+
+## Style guide
+
+API design guide: <https://cloud.google.com/apis/design>
+
+Programming Guides: <https://protobuf.dev/programming-guides/>
+
+Style guide: <https://buf.build/docs/best-practices/style-guide>
+
+Uber Protobuf Style Guide V2: <https://github.com/uber/prototool/blob/dev/style/README.md>
 
 ## use protoc generate code
 

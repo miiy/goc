@@ -9,6 +9,31 @@ option java_package = "com.echo.v1";
 
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "Shop API";
+    version: "1.0";
+    contact: {
+      name: "shop project";
+      url: "https://github.com/miiy/goc/examples/shop";
+      email: "none@example.com";
+    };
+    license: {
+      name: "BSD 3-Clause License";
+      url: "https://github.com/miiy/goc/blob/main/examples/shop/LICENSE.txt";
+    }
+  };
+  // Overwriting host entry breaks tests, so this is not done here.
+  external_docs: {
+    url: "https://github.com/grpc-ecosystem/grpc-gateway";
+    description: "More about goc";
+  }
+  schemes: HTTP;
+  schemes: HTTPS;
+  schemes: WSS;
+};
 
 enum PostStatus {
   POST_STATUS_UNSPECIFIED = 0;
@@ -26,7 +51,7 @@ message Post {
 }
 
 message GetPostRequest {
-  int64 id = 1;
+  int64 id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "The post id field."}];
 }
 
 message GetPostResponse {

@@ -1,13 +1,27 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "shop/post/v1/post.proto",
-    "version": "version not set"
+    "title": "Shop API",
+    "version": "1.0",
+    "contact": {
+      "name": "shop project",
+      "url": "https://github.com/miiy/goc/examples/shop",
+      "email": "none@example.com"
+    },
+    "license": {
+      "name": "BSD 3-Clause License",
+      "url": "https://github.com/miiy/goc/blob/main/examples/shop/LICENSE.txt"
+    }
   },
   "tags": [
     {
       "name": "PostService"
     }
+  ],
+  "schemes": [
+    "http",
+    "https",
+    "wss"
   ],
   "consumes": [
     "application/json"
@@ -90,6 +104,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "The post id field.",
             "in": "path",
             "required": true,
             "type": "string",
@@ -191,5 +206,9 @@
       ],
       "default": "POST_STATUS_UNSPECIFIED"
     }
+  },
+  "externalDocs": {
+    "description": "More about goc",
+    "url": "https://github.com/grpc-ecosystem/grpc-gateway"
   }
 }

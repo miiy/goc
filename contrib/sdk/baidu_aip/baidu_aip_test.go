@@ -3,14 +3,14 @@ package baidu_aip
 import "testing"
 
 const (
-	apiKey    = ""
-	secretKey = ""
+	testApiKey    = ""
+	testSecretKey = ""
 )
 
 var tc *BaiduAip
 
 func TestNewClient(t *testing.T) {
-	tc = NewClient(apiKey, secretKey)
+	tc = NewClient(testApiKey, testSecretKey)
 	t.Logf("%+v", tc)
 }
 

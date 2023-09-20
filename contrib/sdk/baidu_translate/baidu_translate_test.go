@@ -4,11 +4,11 @@ import (
 	"testing"
 )
 
-var appId = ""
-var secKey =""
+var testAppId = ""
+var testSecKey = ""
 
 func TestBaiduTranslate_Translate(t *testing.T) {
-	c := NewBaiduTranslate(appId, secKey)
+	c := NewBaiduTranslate(testAppId, testSecKey)
 	ret, err := c.Translate("苹果", "", EN)
 	if err != nil {
 		t.Error(err)

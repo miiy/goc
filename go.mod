@@ -29,7 +29,6 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ims v1.0.752
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ocr v1.0.752
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tms v1.0.752
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tts v1.0.754
 	github.com/xuri/excelize/v2 v2.8.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.42.0
 	go.uber.org/zap v1.25.0

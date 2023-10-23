@@ -18,6 +18,9 @@ func SplitByHeading(reader io.Reader) ([]string, error) {
 			contents = append(contents, currContent.String())
 			break
 		}
+		if err != nil {
+			return contents, err
+		}
 		line := string(b) + "\n"
 		if strings.HasPrefix(line, "#") {
 			contents = append(contents, currContent.String())

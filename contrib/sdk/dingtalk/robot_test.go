@@ -1,4 +1,4 @@
-package dingtalk_robot
+package dingtalk
 
 import (
 	"context"

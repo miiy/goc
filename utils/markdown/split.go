@@ -1,35 +1,30 @@
 package markdown
 
 import (
-	"regexp"
+	"bufio"
+	"io"
 	"strings"
 )
 
-func Split(markdown string) []string {
-	// Define the regular expression for matching headings
-	regex := regexp.MustCompile(`(?m)^#+\s+(.*)$`)
-
-	// Find all the headings using the regular expression
-	matches := regex.FindAllStringSubmatch(markdown, -1)
+func SplitByHeading(reader io.Reader) ([]string, error) {
+	// Create a reader
+	r := bufio.NewReader(reader)
 
 	var contents []string
-	startIndex := 0
-	// Iterate over the matches
-	for _, match := range matches {
-		titleIndex := strings.Index(markdown, match[0])
-		// if the first line is Heading
-		if titleIndex == 0 {
-			continue
+	var currContent strings.Builder
+	for {
+		b, _, err := r.ReadLine()
+		if err == io.EOF {
+			contents = append(contents, currContent.String())
+			break
 		}
-		content := markdown[startIndex:titleIndex]
-		startIndex = titleIndex
-		contents = append(contents, content)
-	}
-	if startIndex < len(markdown) {
-		content := markdown[startIndex:]
-		contents = append(contents, content)
+		line := string(b) + "\n"
+		if strings.HasPrefix(line, "#") {
+			contents = append(contents, currContent.String())
+			currContent.Reset()
+		}
+		currContent.WriteString(line)
 	}
 
-	//fmt.Println(strings.Join(contents, ""))
-	return contents
+	return contents, nil
 }

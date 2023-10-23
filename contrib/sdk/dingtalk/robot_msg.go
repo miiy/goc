@@ -1,4 +1,4 @@
-package dingtalk_robot
+package dingtalk
 
 type TextMsg struct {
 	At      TextMsgAt   `json:"at"`

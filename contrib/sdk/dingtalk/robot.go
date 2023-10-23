@@ -1,4 +1,4 @@
-package dingtalk_robot
+package dingtalk
 
 import (
 	"bytes"
@@ -11,20 +11,20 @@ import (
 )
 
 type Robot struct {
-	AccessToken string
-	Client      *http.Client
+	accessToken string
+	client      *http.Client
 }
 
 type Option func(*Robot)
 
 const (
-	RobotHost = "https://oapi.dingtalk.com/robot/send"
+	HookUrl = "https://oapi.dingtalk.com/robot/send"
 )
 
 func NewRobot(accessToken string, opts ...Option) (*Robot, error) {
 	c := &Robot{
-		AccessToken: accessToken,
-		Client:      http.DefaultClient,
+		accessToken: accessToken,
+		client:      http.DefaultClient,
 	}
 	for _, o := range opts {
 		o(c)
@@ -34,7 +34,7 @@ func NewRobot(accessToken string, opts ...Option) (*Robot, error) {
 
 func WithClient(c *http.Client) Option {
 	return func(r *Robot) {
-		r.Client = c
+		r.client = c
 	}
 }
 
@@ -44,19 +44,19 @@ func (r *Robot) SendText(ctx context.Context, msg *TextMsg) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s?access_token=%s", RobotHost, r.AccessToken), bytes.NewReader(reqBody))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s?access_token=%s", HookUrl, r.accessToken), bytes.NewReader(reqBody))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := r.Client.Do(req)
+	resp, err := r.client.Do(req)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("send text failed")
 	}
-	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err

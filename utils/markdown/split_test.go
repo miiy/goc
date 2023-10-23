@@ -1,6 +1,10 @@
 package markdown
 
-import "testing"
+import (
+	"fmt"
+	"strings"
+	"testing"
+)
 
 var testMarkdown = `
 ---
@@ -45,9 +49,31 @@ content1.1
 content1.2
 
 # Heading2
+
+# Heading3
+
+content3
+
+# Heading3
+
+content3 repeat
+
 `
 
 func TestSplit(t *testing.T) {
-	Split(testMarkdown)
-	Split(testMarkdown2)
+	contents, err := SplitByHeading(strings.NewReader(testMarkdown))
+	if err != nil {
+		t.Log(err)
+	}
+	for _, content := range contents {
+		fmt.Print(content)
+	}
+	fmt.Println("---")
+	contents, err = SplitByHeading(strings.NewReader(testMarkdown2))
+	if err != nil {
+		t.Log(err)
+	}
+	for _, content := range contents {
+		fmt.Print(content)
+	}
 }

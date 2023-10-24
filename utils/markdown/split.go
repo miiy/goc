@@ -2,31 +2,32 @@ package markdown
 
 import (
 	"bufio"
+	"bytes"
 	"io"
-	"strings"
 )
 
-func SplitByHeading(reader io.Reader) ([]string, error) {
+func SplitByHeading(reader io.Reader) ([][]byte, error) {
 	// Create a reader
 	r := bufio.NewReader(reader)
 
-	var contents []string
-	var currContent strings.Builder
+	var contents [][]byte
+	var curr = new(bytes.Buffer)
 	for {
-		b, _, err := r.ReadLine()
+		line, _, err := r.ReadLine()
 		if err == io.EOF {
-			contents = append(contents, currContent.String())
+			contents = append(contents, curr.Bytes())
 			break
 		}
 		if err != nil {
 			return contents, err
 		}
-		line := string(b) + "\n"
-		if strings.HasPrefix(line, "#") {
-			contents = append(contents, currContent.String())
-			currContent.Reset()
+
+		if bytes.HasPrefix(line, []byte("#")) {
+			contents = append(contents, curr.Bytes())
+			curr = new(bytes.Buffer)
 		}
-		currContent.WriteString(line)
+		curr.Write(line)
+		curr.WriteByte('\n')
 	}
 
 	return contents, nil

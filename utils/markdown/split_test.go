@@ -66,7 +66,7 @@ func TestSplit(t *testing.T) {
 		t.Log(err)
 	}
 	for _, content := range contents {
-		fmt.Print(content)
+		fmt.Print(string(content))
 	}
 	fmt.Println("---")
 	contents, err = SplitByHeading(strings.NewReader(testMarkdown2))
@@ -74,6 +74,6 @@ func TestSplit(t *testing.T) {
 		t.Log(err)
 	}
 	for _, content := range contents {
-		fmt.Print(content)
+		fmt.Print(string(content))
 	}
 }

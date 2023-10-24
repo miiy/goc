@@ -6,8 +6,7 @@ import (
 	"testing"
 )
 
-var testMarkdown = `
----
+var testMarkdown = `---
 title: Test
 linkTitle: Test
 weight: 9

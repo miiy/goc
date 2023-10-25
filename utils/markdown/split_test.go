@@ -59,7 +59,7 @@ content3 repeat
 
 `
 
-func TestSplit(t *testing.T) {
+func TestSplitByHeading(t *testing.T) {
 	contents, err := SplitByHeading(strings.NewReader(testMarkdown))
 	if err != nil {
 		t.Log(err)

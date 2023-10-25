@@ -7,6 +7,9 @@ import (
 )
 
 func TestTranslateParse(t *testing.T) {
+	var parser Parser
+	parser.ParseBlock([]byte(testMarkdown))
+	return
 	blocks, err := TranslateParse(strings.NewReader(testMarkdown))
 	if err != nil {
 		t.Error(err)

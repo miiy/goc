@@ -7,6 +7,10 @@ import (
 	"io"
 )
 
+type Parser struct {
+	Blocks []Block
+}
+
 type BlockType int
 
 type Block struct {
@@ -22,6 +26,98 @@ const (
 	BlockKindCode
 	BlockKindParagraph
 )
+
+func (p *Parser) addBlock(kind BlockType, data []byte) {
+	p.Blocks = append(p.Blocks, Block{
+		Kind:    kind,
+		Content: data,
+	})
+}
+
+func (p *Parser) ParseBlock(data []byte) error {
+	var i int
+	for i < len(data) {
+		//current := data[i:]
+		////line := i
+		//fmt.Print(string(current))
+
+		// heading
+		if isPrefixHeading(data) {
+			end := p.prefixHeading(data)
+			data = data[end:]
+			continue
+		}
+
+		if isMetadata(data) {
+			end := p.metadata(data)
+			data = data[end:]
+			continue
+		}
+
+		// 扫描行
+		nl := bytes.IndexByte(data, '\n')
+		if nl >= 0 {
+			i = i + nl + 1
+		}
+		fmt.Print(string(data[:i]))
+		data = data[i:]
+	}
+
+	return nil
+}
+
+func isPrefixHeading(data []byte) bool {
+	i := skipChar(data, 0, ' ')
+	if data[i] != '#' {
+		return false
+	}
+	return true
+}
+
+func (p *Parser) prefixHeading(data []byte) int {
+	end := bytes.IndexByte(data, '\n')
+	p.addBlock(BlockKindMetadata, data[:end])
+	return end + 1
+}
+
+func isMetadata(data []byte) bool {
+	// look at the metadata char
+	i := 0
+	if data[i] != '-' {
+		return false
+	}
+
+	// the whole line must be the char or whitespace
+	n := 0
+	for i < len(data) && data[i] != '\n' {
+		switch {
+		case data[i] == '-':
+			n++
+		case data[i] != ' ':
+			return false
+		}
+		i++
+	}
+
+	return n >= 3
+}
+
+func (p *Parser) metadata(data []byte) int {
+	// first line ---
+	end := bytes.IndexByte(data, '\n')
+	beg := end + 1
+	for beg < len(data) {
+		end = bytes.IndexByte(data, '\n')
+		end = end + end + 1
+		line := data[beg:end]
+		beg = end + 1
+		if isMetadata(line) {
+			break
+		}
+	}
+	p.addBlock(BlockKindMetadata, data[:end])
+	return end
+}
 
 // TranslateParse
 // metadata: 第一行至少是三个连续的短横线，结束至少是三个连续的短横线
@@ -123,4 +219,15 @@ func TranslateParse(reader io.Reader) ([]Block, error) {
 	//
 	//}
 
+}
+
+func skipChar(data []byte, start int, char byte) int {
+	i := start
+	for i < len(data) {
+		if data[i] != char {
+			break
+		}
+		i++
+	}
+	return i
 }

@@ -121,6 +121,54 @@ func (p *Parser) prefixHeading(data []byte) int {
 	return end
 }
 
+// isFenceLine
+//
+// ```
+// ```
+//
+// ~~~
+// ~~~
+//
+//	```
+//
+// ```
+func isFenceLine(data []byte) bool {
+	i := 0
+	// skip up to three spaces
+	for i < len(data) && i < 3 && data[i] == ' ' {
+		i++
+	}
+
+	if i >= len(data) {
+		return false
+	}
+
+	if data[i] != '`' && data[i] != '~' {
+		return false
+	}
+
+	c := data[i]
+
+	// the whole line must be the char or whitespace
+	n := 0
+	for i < len(data) && data[i] == c {
+		n++
+		i++
+	}
+
+	return n >= 3
+}
+
+func isCodePrefix(data []byte) bool {
+	if len(data) >= 1 && data[0] == '\t' {
+		return true
+	}
+	if len(data) >= 4 && data[0] == ' ' && data[1] == ' ' && data[2] == ' ' && data[3] == ' ' {
+		return true
+	}
+	return false
+}
+
 func (p *Parser) paragraph(data []byte) int {
 	var i, end int
 	for i <= len(data) {

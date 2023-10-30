@@ -1,66 +1,19 @@
 package markdown
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
+	"os"
 	"testing"
 )
 
-var testMarkdown = `---
-title: Test
-linkTitle: Test
-weight: 9
-description: >
-    Test
-aliases:
-  - /test/test
----
-
-test
-
-# Heading1
-
-content1
-
-## Subheading1.1
-
-content1.1
-
-## Subheading1.2
-
-content1.2
-
-# Heading2
-
-content2
-`
-
-var testMarkdown2 = `# Heading1
-
-content1
-
-## Subheading1.1
-
-content1.1
-
-## Subheading1.2
-
-content1.2
-
-# Heading2
-
-# Heading3
-
-content3
-
-# Heading3
-
-content3 repeat
-
-`
-
 func TestSplitByHeading(t *testing.T) {
-	contents, err := SplitByHeading(strings.NewReader(testMarkdown))
+	testMarkdown1, err := os.ReadFile("./test1.md")
+	if err != nil {
+		t.Log(err)
+	}
+
+	contents, err := SplitByHeading(bytes.NewReader(testMarkdown1))
 	if err != nil {
 		t.Log(err)
 	}
@@ -68,7 +21,12 @@ func TestSplitByHeading(t *testing.T) {
 		fmt.Print(string(content))
 	}
 	fmt.Println("---")
-	contents, err = SplitByHeading(strings.NewReader(testMarkdown2))
+
+	testMarkdown2, err := os.ReadFile("./test2.md")
+	if err != nil {
+		t.Log(err)
+	}
+	contents, err = SplitByHeading(bytes.NewReader(testMarkdown2))
 	if err != nil {
 		t.Log(err)
 	}

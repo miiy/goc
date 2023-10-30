@@ -27,6 +27,14 @@ const (
 func (p *Parser) ParseBlock(data []byte) ([]Block, error) {
 	for len(data) > 0 {
 
+		// metadata
+		if len(p.Blocks) == 0 && isMetadata(data) {
+			end := p.metadata(data)
+			data = data[end:]
+			continue
+		}
+
+		// empty line
 		if isEmpty(data) {
 			end := p.blankLine(data)
 			data = data[end:]
@@ -40,8 +48,16 @@ func (p *Parser) ParseBlock(data []byte) ([]Block, error) {
 			continue
 		}
 
-		if isMetadata(data) {
-			end := p.metadata(data)
+		// fenced code block
+		if isFenceLine(data) {
+			end := p.fencedCodeBlock(data)
+			data = data[end:]
+			continue
+		}
+
+		// indent code block
+		if isCodePrefix(data) {
+			end := p.code(data)
 			data = data[end:]
 			continue
 		}
@@ -67,31 +83,21 @@ func (p *Parser) blankLine(data []byte) int {
 }
 
 func isMetadata(data []byte) bool {
-	// look at the metadata char
-	i := 0
-	if data[i] != '-' {
-		return false
-	}
-
-	// the whole line must be the char or whitespace
+	// the whole line must be the char
 	n := 0
-	for i < len(data) && data[i] != '\n' {
+	for i := 0; i < len(data) && data[i] != '\n'; i++ {
 		switch {
 		case data[i] == '-':
 			n++
-		case data[i] != ' ':
+		case data[i] != '-':
 			return false
 		}
-		i++
 	}
 
 	return n >= 3
 }
 
 // metadata
-// ---\n
-// aaa\n
-// ---\n
 func (p *Parser) metadata(data []byte) int {
 	// first line ---
 	end := bytes.IndexByte(data, '\n') + 1
@@ -122,16 +128,6 @@ func (p *Parser) prefixHeading(data []byte) int {
 }
 
 // isFenceLine
-//
-// ```
-// ```
-//
-// ~~~
-// ~~~
-//
-//	```
-//
-// ```
 func isFenceLine(data []byte) bool {
 	i := 0
 	// skip up to three spaces
@@ -159,6 +155,21 @@ func isFenceLine(data []byte) bool {
 	return n >= 3
 }
 
+func (p *Parser) fencedCodeBlock(data []byte) int {
+	// first line ```
+	end := bytes.IndexByte(data, '\n') + 1
+	beg := end
+	for end < len(data) {
+		end = bytes.IndexByte(data[beg:], '\n') + 1
+		if isFenceLine(data[beg:]) {
+			break
+		}
+		beg += end
+	}
+	p.addBlock(BlockKindCode, data[:beg+end])
+	return beg + end
+}
+
 func isCodePrefix(data []byte) bool {
 	if len(data) >= 1 && data[0] == '\t' {
 		return true
@@ -167,6 +178,24 @@ func isCodePrefix(data []byte) bool {
 		return true
 	}
 	return false
+}
+
+func (p *Parser) code(data []byte) int {
+	i := 0
+	for i < len(data) {
+		end := bytes.IndexByte(data[i:], '\n') + 1
+		if isCodePrefix(data[i:]) {
+			i += end
+			continue
+		}
+		if isEmpty(data[i:]) {
+			i += end
+			continue
+		}
+		break
+	}
+	p.addBlock(BlockKindCode, data[:i])
+	return i
 }
 
 func (p *Parser) paragraph(data []byte) int {

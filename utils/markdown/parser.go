@@ -4,15 +4,15 @@ import (
 	"bytes"
 )
 
-type Parser struct {
-	Blocks []Block
-}
-
 type BlockType int
 
 type Block struct {
 	Kind    BlockType
 	Content []byte
+}
+
+type Parser struct {
+	Blocks []Block
 }
 
 const (
@@ -23,6 +23,10 @@ const (
 	BlockKindCode
 	BlockKindParagraph
 )
+
+func NewParser() *Parser {
+	return &Parser{}
+}
 
 func (p *Parser) ParseBlock(data []byte) ([]Block, error) {
 	for len(data) > 0 {

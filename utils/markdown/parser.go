@@ -30,7 +30,6 @@ func NewParser() *Parser {
 
 func (p *Parser) ParseBlock(data []byte) ([]Block, error) {
 	for len(data) > 0 {
-
 		// metadata
 		if len(p.Blocks) == 0 && isMetadata(data) {
 			end := p.metadata(data)
@@ -206,6 +205,11 @@ func (p *Parser) paragraph(data []byte) int {
 	var i, end int
 	for i <= len(data) {
 		end = bytes.IndexByte(data[i:], '\n') + 1
+		if end == 0 {
+			// line end not have \n
+			end = len(data)
+			return end
+		}
 		if isEmpty(data[i:]) {
 			p.addBlock(BlockKindParagraph, data[:i])
 			return i

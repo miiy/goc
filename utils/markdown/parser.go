@@ -92,6 +92,7 @@ func isMetadata(data []byte) bool {
 		switch {
 		case data[i] == '-':
 			n++
+		case data[i] == '\r': // ---/r/n
 		case data[i] != '-':
 			return false
 		}
@@ -206,9 +207,7 @@ func (p *Parser) paragraph(data []byte) int {
 	for i <= len(data) {
 		end = bytes.IndexByte(data[i:], '\n') + 1
 		if end == 0 {
-			// line end not have \n
-			end = len(data)
-			return end
+			end = len(data[i:]) // end without \n
 		}
 		if isEmpty(data[i:]) {
 			p.addBlock(BlockKindParagraph, data[:i])
@@ -221,7 +220,7 @@ func (p *Parser) paragraph(data []byte) int {
 
 func isEmpty(data []byte) bool {
 	for i := 0; i < len(data) && data[i] != '\n'; i++ {
-		if data[i] != ' ' && data[i] != '\t' {
+		if data[i] != ' ' && data[i] != '\r' && data[i] != '\t' {
 			return false
 		}
 	}

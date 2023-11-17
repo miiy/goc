@@ -16,7 +16,7 @@ func TestNewClient(t *testing.T) {
 
 func TestTextCensor(t *testing.T) {
 	TestNewClient(t)
-	ret, err := tc.TextCensor("操你妈")
+	ret, err := tc.TextCensor("test")
 	if err != nil {
 		t.Error(err)
 	}
@@ -28,7 +28,7 @@ func TestTextCensor(t *testing.T) {
 
 func TestImgCensor(t *testing.T) {
 	TestNewClient(t)
-	ret, err := tc.ImgCensor("./test.png")
+	ret, err := tc.ImgCensor("./test.png", nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -40,7 +40,7 @@ func TestImgCensor(t *testing.T) {
 
 func TestImgCensorUrl(t *testing.T) {
 	TestNewClient(t)
-	ret, err := tc.ImgCensorUrl("")
+	ret, err := tc.ImgCensorUrl("", nil)
 	if err != nil {
 		t.Error(err)
 	}

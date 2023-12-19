@@ -2,6 +2,16 @@ package time
 
 import "time"
 
+// TodayBeginTime returns the today's begin time.
+func TodayBeginTime(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+}
+
+// TodayEndTime returns the today's end time.
+func TodayEndTime(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 59, t.Location())
+}
+
 // NextDayBeginTime returns the next day's begin time.
 func NextDayBeginTime(t time.Time) time.Time {
 	nt := t.AddDate(0, 0, 1)

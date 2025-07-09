@@ -14,7 +14,7 @@ type swaggerInitializerUrl struct {
 	Name string `json:"name"`
 }
 
-//go:embed swagger-ui
+//go:embed swagger-ui-5.26.2/dist
 var SwaggerUIFS embed.FS
 
 var swaggerInitializerTpl = `

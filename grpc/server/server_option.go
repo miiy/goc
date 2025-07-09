@@ -3,6 +3,10 @@ package server
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"log"
+	"os"
+	"runtime/debug"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -15,9 +19,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
-	"log"
-	"os"
-	"runtime/debug"
 )
 
 func WithMTLS(certFilePath, keyFilePath, caFilePath string) grpc.ServerOption {
@@ -55,16 +56,15 @@ func DefaultInterceptor(logger *zap.Logger, authFunc auth.AuthFunc, matcher sele
 	}
 
 	return []grpc.ServerOption{
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
-			// Order matters e.g. tracing interceptor have to create span first for the later exemplars to work.
-			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFunc), matcher),
 			logging.UnaryServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
+			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFunc), matcher),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 		grpc.ChainStreamInterceptor(
-			otelgrpc.StreamServerInterceptor(),
-			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFunc), matcher),
 			logging.StreamServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
+			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFunc), matcher),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
 		),
 	}

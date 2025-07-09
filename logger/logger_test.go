@@ -2,8 +2,9 @@ package logger
 
 import (
 	"errors"
-	"github.com/miiy/goc/logger/zap"
 	"testing"
+
+	"github.com/miiy/goc/logger/zap"
 )
 
 func TestNewLogger(t *testing.T) {
@@ -11,7 +12,7 @@ func TestNewLogger(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tLogger.Sync()
+	defer tLogger.ZapLogger().Sync()
 	logger.Info("info msg.")
 	Debug("debug msg.")
 	Info("info msg.")
@@ -23,7 +24,7 @@ func TestNewLoggerWithLevel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tLogger.Sync()
+	defer tLogger.ZapLogger().Sync()
 	logger.Debug("debug msg.")
 	logger.Info("info msg.")
 	logger.Error("error msg.", zap.Error(errors.New("error info")))

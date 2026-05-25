@@ -1,3 +1,3 @@
 module github.com/miiy/goc/contrib/dingtalk
 
-go 1.24.2
+go 1.26.0

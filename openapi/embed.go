@@ -14,10 +14,10 @@ type swaggerInitializerUrl struct {
 	Name string `json:"name"`
 }
 
-//go:embed swagger-ui-5.26.2/dist
+//go:embed swagger-ui-5.32.6/dist
 var SwaggerUIFS embed.FS
 
-const SwaggerUIFolder = "swagger-ui-5.26.2/dist"
+const SwaggerUIFolder = "swagger-ui-5.32.6/dist"
 
 var swaggerInitializerTpl = `
 window.onload = function() {

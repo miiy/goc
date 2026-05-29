@@ -3,7 +3,7 @@ package server
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"log"
+	"fmt"
 	"os"
 	"runtime/debug"
 
@@ -21,30 +21,30 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func WithMTLS(certFilePath, keyFilePath, caFilePath string) grpc.ServerOption {
+func WithMTLS(certFilePath, keyFilePath, caFilePath string) (grpc.ServerOption, error) {
 	cert, err := tls.LoadX509KeyPair(certFilePath, keyFilePath)
 	if err != nil {
-		log.Fatalf("failed to load key pair: %s", err)
+		return nil, fmt.Errorf("failed to load key pair: %w", err)
 	}
 
 	ca := x509.NewCertPool()
 	caBytes, err := os.ReadFile(caFilePath)
 	if err != nil {
-		log.Fatalf("failed to read ca cert %q: %v", caFilePath, err)
+		return nil, fmt.Errorf("failed to read ca cert %q: %w", caFilePath, err)
 	}
 	if ok := ca.AppendCertsFromPEM(caBytes); !ok {
-		log.Fatalf("failed to parse %q", caFilePath)
+		return nil, fmt.Errorf("failed to parse %q", caFilePath)
 	}
+
 	tlsConfig := &tls.Config{
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		Certificates: []tls.Certificate{cert},
 		ClientCAs:    ca,
 	}
-	return grpc.Creds(credentials.NewTLS(tlsConfig))
+	return grpc.Creds(credentials.NewTLS(tlsConfig)), nil
 }
 
 func DefaultInterceptor(logger *zap.Logger, authFunc auth.AuthFunc, matcher selector.Matcher) []grpc.ServerOption {
-	// Define customfunc to handle panic
 	grpcPanicRecoveryHandler := func(p any) (err error) {
 		grpclog.Error("msg", "recovered from panic", "panic", p, "stack", debug.Stack())
 		return status.Errorf(codes.Internal, "%s", p)
@@ -52,7 +52,6 @@ func DefaultInterceptor(logger *zap.Logger, authFunc auth.AuthFunc, matcher sele
 
 	loggerOpts := []logging.Option{
 		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall),
-		// Add any other option (check functions starting with logging.With).
 	}
 
 	return []grpc.ServerOption{

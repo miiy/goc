@@ -1,0 +1,144 @@
+package auth
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	ginsessions "github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
+	gocauth "github.com/miiy/goc/auth"
+)
+
+type testSession struct {
+	values map[interface{}]interface{}
+}
+
+func newTestSession() *testSession {
+	return &testSession{
+		values: make(map[interface{}]interface{}),
+	}
+}
+
+func (s *testSession) ID() string { return "" }
+
+func (s *testSession) Get(key interface{}) interface{} {
+	return s.values[key]
+}
+
+func (s *testSession) Set(key interface{}, val interface{}) {
+	s.values[key] = val
+}
+
+func (s *testSession) Delete(key interface{}) {
+	delete(s.values, key)
+}
+
+func (s *testSession) Clear() {
+	for key := range s.values {
+		delete(s.values, key)
+	}
+}
+
+func (s *testSession) AddFlash(interface{}, ...string) {}
+
+func (s *testSession) Flashes(...string) []interface{} {
+	return nil
+}
+
+func (s *testSession) Options(ginsessions.Options) {}
+
+func (s *testSession) Save() error {
+	return nil
+}
+
+func TestSessionAuthenticationMiddlewareSetsPointerAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	session := newTestSession()
+	user := &gocauth.AuthenticatedUser{ID: 1, Username: "user"}
+	session.Set(SessionKeyAuthUser, user)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest("GET", "/private", nil)
+	c.Set(ginsessions.DefaultKey, session)
+
+	SessionAuthenticationMiddleware("/register")(c)
+
+	auth, exists := c.Get(AuthUserKey)
+	if !exists {
+		t.Fatal("expected auth in context")
+	}
+	if auth != user {
+		t.Fatalf("expected auth user, got %v", auth)
+	}
+
+	ctxUser, err := gocauth.ExtractAuthenticatedUser(c.Request.Context())
+	if err != nil {
+		t.Fatalf("expected auth user in request context: %v", err)
+	}
+	if ctxUser != user {
+		t.Fatalf("expected request context user, got %v", ctxUser)
+	}
+}
+
+func TestSessionAuthenticationMiddlewareRedirectsWhenMissingAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodGet, "/private", nil)
+	c.Set(ginsessions.DefaultKey, newTestSession())
+
+	SessionAuthenticationMiddleware("/login")(c)
+
+	if !c.IsAborted() {
+		t.Fatal("expected request to be aborted")
+	}
+	if c.Writer.Status() != 302 {
+		t.Fatalf("expected redirect status 302, got %d", c.Writer.Status())
+	}
+	if location := c.Writer.Header().Get("Location"); location != "/login" {
+		t.Fatalf("expected redirect to /login, got %q", location)
+	}
+}
+
+func TestSessionAuthenticationMiddlewareRedirectsWhenAuthTypeIsInvalid(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	session := newTestSession()
+	session.Set(SessionKeyAuthUser, gocauth.AuthenticatedUser{ID: 1, Username: "user"})
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodGet, "/private", nil)
+	c.Set(ginsessions.DefaultKey, session)
+
+	SessionAuthenticationMiddleware("/login")(c)
+
+	if !c.IsAborted() {
+		t.Fatal("expected request to be aborted")
+	}
+	if c.Writer.Status() != http.StatusFound {
+		t.Fatalf("expected redirect status 302, got %d", c.Writer.Status())
+	}
+	if location := c.Writer.Header().Get("Location"); location != "/login" {
+		t.Fatalf("expected redirect to /login, got %q", location)
+	}
+}
+
+func TestSessionAuthenticationMiddlewareUsesDefaultRedirectPath(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodGet, "/private", nil)
+	c.Set(ginsessions.DefaultKey, newTestSession())
+
+	SessionAuthenticationMiddleware("")(c)
+
+	if !c.IsAborted() {
+		t.Fatal("expected request to be aborted")
+	}
+	if c.Writer.Status() != http.StatusFound {
+		t.Fatalf("expected redirect status 302, got %d", c.Writer.Status())
+	}
+	if location := c.Writer.Header().Get("Location"); location != "/register" {
+		t.Fatalf("expected redirect to /register, got %q", location)
+	}
+}

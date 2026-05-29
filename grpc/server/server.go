@@ -25,7 +25,7 @@ func Run(ctx context.Context, opts Options) error {
 	server := grpc.NewServer(opts.ServerOption...)
 	lis, err := net.Listen(opts.Network, opts.Addr)
 	if err != nil {
-		return fmt.Errorf("failed to listen: %s", err)
+		return fmt.Errorf("failed to listen: %w", err)
 	}
 
 	// register service
@@ -45,6 +45,6 @@ func Run(ctx context.Context, opts Options) error {
 		}
 	}()
 
-	grpclog.Infof("server listening at ", lis.Addr().String())
+	grpclog.Infof("server listening at %s", lis.Addr().String())
 	return server.Serve(lis)
 }

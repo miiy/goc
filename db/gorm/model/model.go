@@ -14,9 +14,9 @@ const (
 
 var FieldNameExpectAutoSet = []string{
 	"id",
-	"create_time",
-	"update_time",
-	"delete_time",
+	"created_at",
+	"updated_at",
+	"deleted_at",
 }
 
 func FieldDBNames(dest interface{}, excepts []string) ([]string, error) {

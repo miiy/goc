@@ -1,7 +1,6 @@
 package gorm
 
 import (
-	"database/sql"
 	"gorm.io/gorm"
 	"time"
 )
@@ -9,10 +8,10 @@ import (
 type DB = gorm.DB
 
 type Model struct {
-	ID         int64        `gorm:"column:id;primarykey"`
-	CreateTime time.Time    `gorm:"column:create_time;autoCreateTime"`
-	UpdateTime time.Time    `gorm:"column:update_time;autoUpdateTime"`
-	DeleteTime sql.NullTime `gorm:"column:delete_time;index"`
+	ID        int64          `gorm:"column:id;primarykey"`
+	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index"`
 }
 
 var ErrRecordNotFound = gorm.ErrRecordNotFound

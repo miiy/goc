@@ -52,35 +52,6 @@ func (s *testSession) Save() error {
 	return nil
 }
 
-func TestSessionAuthenticationMiddlewareSetsPointerAuth(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	session := newTestSession()
-	user := &gocauth.AuthenticatedUser{ID: 1, Username: "user"}
-	session.Set(SessionKeyAuthUser, user)
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
-	c.Request = httptest.NewRequest("GET", "/private", nil)
-	c.Set(ginsessions.DefaultKey, session)
-
-	SessionAuthenticationMiddleware("/register")(c)
-
-	auth, exists := c.Get(AuthUserKey)
-	if !exists {
-		t.Fatal("expected auth in context")
-	}
-	if auth != user {
-		t.Fatalf("expected auth user, got %v", auth)
-	}
-
-	ctxUser, err := gocauth.ExtractAuthenticatedUser(c.Request.Context())
-	if err != nil {
-		t.Fatalf("expected auth user in request context: %v", err)
-	}
-	if ctxUser != user {
-		t.Fatalf("expected request context user, got %v", ctxUser)
-	}
-}
-
 func TestSessionAuthenticationMiddlewareRedirectsWhenMissingAuth(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -101,11 +72,43 @@ func TestSessionAuthenticationMiddlewareRedirectsWhenMissingAuth(t *testing.T) {
 	}
 }
 
+func TestSessionAuthenticationMiddlewareSetsMapAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	session := newTestSession()
+	session.Set(SessionKeyAuthUser, map[string]any{"id": float64(1), "username": "user"})
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodGet, "/private", nil)
+	c.Set(ginsessions.DefaultKey, session)
+
+	SessionAuthenticationMiddleware("/login")(c)
+
+	auth, exists := c.Get(AuthUserKey)
+	if !exists {
+		t.Fatal("expected auth in context")
+	}
+	user, ok := auth.(*gocauth.AuthenticatedUser)
+	if !ok {
+		t.Fatalf("expected *AuthenticatedUser, got %T", auth)
+	}
+	if user.ID != 1 || user.Username != "user" {
+		t.Fatalf("unexpected user: %#v", user)
+	}
+
+	ctxUser, err := gocauth.ExtractAuthenticatedUser(c.Request.Context())
+	if err != nil {
+		t.Fatalf("expected auth user in request context: %v", err)
+	}
+	if ctxUser.ID != 1 || ctxUser.Username != "user" {
+		t.Fatalf("unexpected request context user: %#v", ctxUser)
+	}
+}
+
 func TestSessionAuthenticationMiddlewareRedirectsWhenAuthTypeIsInvalid(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	session := newTestSession()
-	session.Set(SessionKeyAuthUser, gocauth.AuthenticatedUser{ID: 1, Username: "user"})
+	session.Set(SessionKeyAuthUser, map[string]any{"id": float64(1)})
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	c.Request = httptest.NewRequest(http.MethodGet, "/private", nil)
 	c.Set(ginsessions.DefaultKey, session)

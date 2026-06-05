@@ -54,17 +54,30 @@ func DefaultInterceptor(logger *zap.Logger, authFunc auth.AuthFunc, matcher sele
 		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall),
 	}
 
+	unaryInterceptors := []grpc.UnaryServerInterceptor{
+		logging.UnaryServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
+	}
+	streamInterceptors := []grpc.StreamServerInterceptor{
+		logging.StreamServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
+	}
+	if authFunc != nil && matcher != nil {
+		unaryInterceptors = append(unaryInterceptors,
+			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFunc), matcher),
+		)
+		streamInterceptors = append(streamInterceptors,
+			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFunc), matcher),
+		)
+	}
+	unaryInterceptors = append(unaryInterceptors,
+		recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
+	)
+	streamInterceptors = append(streamInterceptors,
+		recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
+	)
+
 	return []grpc.ServerOption{
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
-			selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(authFunc), matcher),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
-		),
-		grpc.ChainStreamInterceptor(
-			logging.StreamServerInterceptor(loggerpkg.InterceptorLogger(logger), loggerOpts...),
-			selector.StreamServerInterceptor(auth.StreamServerInterceptor(authFunc), matcher),
-			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)),
-		),
+		grpc.ChainUnaryInterceptor(unaryInterceptors...),
+		grpc.ChainStreamInterceptor(streamInterceptors...),
 	}
 }

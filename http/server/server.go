@@ -2,27 +2,31 @@ package server
 
 import (
 	"context"
-	"fmt"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
+	"errors"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
+const defaultShutdownTimeout = 5 * time.Second
+
 type Server struct {
-	debug  bool
-	addr   string
-	engine *gin.Engine
-	logger *zap.Logger
+	debug           bool
+	addr            string
+	shutdownTimeout time.Duration
+	engine          *gin.Engine
+	logger          *zap.Logger
 }
 
 func New(opts ...Option) *Server {
 	s := &Server{
-		debug: false,
-		addr:  "127.0.0.1:8080",
+		debug:           false,
+		addr:            "127.0.0.1:8080",
+		shutdownTimeout: defaultShutdownTimeout,
 	}
 
 	for _, opt := range opts {
@@ -31,7 +35,6 @@ func New(opts ...Option) *Server {
 
 	if s.debug {
 		gin.SetMode(gin.DebugMode)
-		//gin.SetMode(gin.TestMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -49,45 +52,73 @@ func (s *Server) RegisterRouter(funcs ...func(r *gin.Engine)) {
 	}
 }
 
+func (s *Server) Handler() http.Handler {
+	return s.engine
+}
+
 // Run
 // https://gin-gonic.com/docs/examples/graceful-restart-or-stop/
 func (s *Server) Run(addr ...string) {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	if err := s.RunContext(ctx, addr...); err != nil {
+		s.zapLogger().Fatal("HTTP server stopped with error", zap.Error(err))
+	}
+}
+
+func (s *Server) RunContext(ctx context.Context, addr ...string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	address := resolveAddress(addr, s.addr)
-	s.logger.Info(fmt.Sprintf("Listening and serving HTTP on %s\n", address))
+	logger := s.logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	logger.Info("listening and serving HTTP", zap.String("addr", address))
 
 	srv := &http.Server{
 		Addr:    address,
 		Handler: s.engine,
 	}
 
+	serveErr := make(chan error, 1)
 	go func() {
-		// service connections
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			s.logger.Fatal("listen: %s\n", zap.Error(err))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serveErr <- err
+			return
 		}
+		serveErr <- nil
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server with
-	// a timeout of 5 seconds.
-	quit := make(chan os.Signal)
-	// kill (no param) default send syscanll.SIGTERM
-	// kill -2 is syscall.SIGINT
-	// kill -9 is syscall. SIGKILL but can"t be catch, so don't need add it
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	s.logger.Info("Shutdown Server ...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		s.logger.Fatal("Server Shutdown:", zap.Error(err))
-	}
-	// catching ctx.Done(). timeout of 5 seconds.
 	select {
+	case err := <-serveErr:
+		return err
 	case <-ctx.Done():
-		s.logger.Info("timeout of 5 seconds.")
 	}
-	s.logger.Info("Server exiting")
+
+	logger.Info("shutting down HTTP server")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return err
+	}
+	if err := <-serveErr; err != nil {
+		return err
+	}
+
+	logger.Info("HTTP server exited")
+	return nil
+}
+
+func (s *Server) zapLogger() *zap.Logger {
+	if s.logger != nil {
+		return s.logger
+	}
+	return zap.NewNop()
 }
 
 func resolveAddress(addr []string, defaultAddr string) string {

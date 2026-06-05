@@ -1,4 +1,4 @@
-package jwt
+package auth
 
 import (
 	"errors"
@@ -7,27 +7,32 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var ErrInvalidSigningMethod = errors.New("jwt auth: invalid signing method")
-
-type UserClaims struct {
-	Username string `json:"username"`
-	jwt.RegisteredClaims
+// JWTAuth handles JWT token creation and parsing.
+type JWTAuth struct {
+	options *Options
 }
 
+// Options configures JWTAuth.
 type Options struct {
 	Secret    string `yaml:"secret"`
 	Issuer    string `yaml:"issuer"`
 	ExpiresIn int64  `yaml:"expiresIn"`
 }
 
-type JWTAuth struct {
-	options *Options
+// UserClaims represents JWT claims with a username.
+type UserClaims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
 }
 
+var ErrInvalidSigningMethod = errors.New("jwt auth: invalid signing method")
+
+// NewJWTAuth creates a new JWTAuth instance.
 func NewJWTAuth(o *Options) *JWTAuth {
 	return &JWTAuth{options: o}
 }
 
+// CreateClaims builds UserClaims for the given username.
 func (j *JWTAuth) CreateClaims(username string) *UserClaims {
 	now := time.Now()
 	claims := &UserClaims{
@@ -45,11 +50,13 @@ func (j *JWTAuth) CreateClaims(username string) *UserClaims {
 	return claims
 }
 
+// CreateTokenByClaims creates a signed JWT token from custom claims.
 func (j *JWTAuth) CreateTokenByClaims(claims jwt.Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(j.options.Secret))
 }
 
+// CreateToken creates a signed JWT token for the given username.
 func (j *JWTAuth) CreateToken(username string) (string, error) {
 	return j.CreateTokenByClaims(j.CreateClaims(username))
 }
@@ -61,6 +68,7 @@ func (j *JWTAuth) keyFunc(token *jwt.Token) (interface{}, error) {
 	return []byte(j.options.Secret), nil
 }
 
+// ParseToken parses and validates a JWT token string.
 func (j *JWTAuth) ParseToken(tokenString string) (*UserClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, j.keyFunc)
 	if err != nil {
@@ -71,4 +79,3 @@ func (j *JWTAuth) ParseToken(tokenString string) (*UserClaims, error) {
 	}
 	return nil, jwt.ErrTokenMalformed
 }
-

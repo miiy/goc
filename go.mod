@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/andreburgaud/crypt2go v1.8.0
+	github.com/boj/redistore v1.4.1
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-contrib/multitemplate v1.1.2
 	github.com/gin-contrib/sessions v1.1.0
@@ -18,6 +19,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	github.com/redis/go-redis/v9 v9.19.0
 	github.com/shopspring/decimal v1.4.0
+	github.com/sqids/sqids-go v0.4.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.68.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/net v0.55.0
@@ -32,7 +34,6 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
-	github.com/boj/redistore v1.4.1 // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
 	github.com/bytedance/sonic v1.15.1 // indirect
 	github.com/bytedance/sonic/loader v0.5.1 // indirect

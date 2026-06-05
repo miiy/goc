@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -83,13 +84,9 @@ func TestSessionAuthenticationMiddlewareSetsMapAuth(t *testing.T) {
 
 	SessionAuthenticationMiddleware("/login")(c)
 
-	auth, exists := c.Get(AuthUserKey)
-	if !exists {
-		t.Fatal("expected auth in context")
-	}
-	user, ok := auth.(*gocauth.AuthenticatedUser)
+	user, ok := GetAuthUser(c)
 	if !ok {
-		t.Fatalf("expected *AuthenticatedUser, got %T", auth)
+		t.Fatal("expected auth user in request context")
 	}
 	if user.ID != 1 || user.Username != "user" {
 		t.Fatalf("unexpected user: %#v", user)
@@ -123,6 +120,76 @@ func TestSessionAuthenticationMiddlewareRedirectsWhenAuthTypeIsInvalid(t *testin
 	}
 	if location := c.Writer.Header().Get("Location"); location != "/login" {
 		t.Fatalf("expected redirect to /login, got %q", location)
+	}
+}
+
+func TestSessionAuthenticationMiddlewareRedirectsWhenAuthIDIsInvalid(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	session := newTestSession()
+	session.Set(SessionKeyAuthUser, map[string]any{"id": float64(0), "username": "user"})
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodGet, "/private", nil)
+	c.Set(ginsessions.DefaultKey, session)
+
+	SessionAuthenticationMiddleware("/login")(c)
+
+	if !c.IsAborted() {
+		t.Fatal("expected request to be aborted")
+	}
+	if c.Writer.Status() != http.StatusFound {
+		t.Fatalf("expected redirect status 302, got %d", c.Writer.Status())
+	}
+	if location := c.Writer.Header().Get("Location"); location != "/login" {
+		t.Fatalf("expected redirect to /login, got %q", location)
+	}
+}
+
+func TestSessionUserAcceptsCommonIDTypes(t *testing.T) {
+	tests := []struct {
+		name string
+		id   any
+	}{
+		{name: "int", id: int(1)},
+		{name: "int64", id: int64(1)},
+		{name: "float32", id: float32(1)},
+		{name: "float64", id: float64(1)},
+		{name: "string", id: "1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			user, ok := SessionUser(map[string]any{"id": tt.id, "username": "user"})
+			if !ok {
+				t.Fatal("expected session user")
+			}
+			if user.ID != 1 || user.Username != "user" {
+				t.Fatalf("unexpected user: %#v", user)
+			}
+		})
+	}
+}
+
+func TestSessionUserRejectsInvalidFloatID(t *testing.T) {
+	tests := []struct {
+		name string
+		id   any
+	}{
+		{name: "float32 fraction", id: float32(1.5)},
+		{name: "float64 fraction", id: float64(1.9)},
+		{name: "nan", id: math.NaN()},
+		{name: "positive infinity", id: math.Inf(1)},
+		{name: "negative infinity", id: math.Inf(-1)},
+		{name: "int64 overflow", id: float64(1 << 63)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			user, ok := SessionUser(map[string]any{"id": tt.id, "username": "user"})
+			if ok {
+				t.Fatalf("expected invalid session user, got %#v", user)
+			}
+		})
 	}
 }
 

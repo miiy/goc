@@ -1,6 +1,10 @@
 package server
 
-import "go.uber.org/zap"
+import (
+	"time"
+
+	"go.uber.org/zap"
+)
 
 // An Option configures a Server.
 type Option interface {
@@ -30,5 +34,13 @@ func WithAddr(addr string) Option {
 func WithLogger(logger *zap.Logger) Option {
 	return optionFunc(func(opts *Server) {
 		opts.logger = logger
+	})
+}
+
+func WithShutdownTimeout(timeout time.Duration) Option {
+	return optionFunc(func(opts *Server) {
+		if timeout > 0 {
+			opts.shutdownTimeout = timeout
+		}
 	})
 }

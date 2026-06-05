@@ -3,10 +3,8 @@ package gateway
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -141,26 +139,4 @@ func Run(ctx context.Context, opts Options) error {
 
 	log.Printf("gateway listening on %s", opts.Addr)
 	return s.ListenAndServe()
-}
-
-func MTLSConfig(serverName, certFilePath, keyFilePath, caFilePath string) *tls.Config {
-	cert, err := tls.LoadX509KeyPair(certFilePath, keyFilePath)
-	if err != nil {
-		log.Fatalf("failed to load client cert: %v", err)
-	}
-
-	ca := x509.NewCertPool()
-	caBytes, err := os.ReadFile(caFilePath)
-	if err != nil {
-		log.Fatalf("failed to read ca cert %q: %v", caFilePath, err)
-	}
-	if ok := ca.AppendCertsFromPEM(caBytes); !ok {
-		log.Fatalf("failed to parse %q", caFilePath)
-	}
-
-	return &tls.Config{
-		ServerName:   serverName,
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      ca,
-	}
 }

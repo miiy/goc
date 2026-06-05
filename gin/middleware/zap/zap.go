@@ -48,9 +48,8 @@ func Ginzap(logger *zap.Logger) gin.HandlerFunc {
 
 			fields = append(fields, zap.String("host", c.Request.Host))
 			fields = append(fields, zap.String("remote-addr", c.Request.RemoteAddr))
-			fields = append(fields, zap.String("authorization", c.Request.Header.Get("Authorization")))
+			fields = append(fields, zap.String("authorization", maskAuthorization(c.Request.Header.Get("Authorization"))))
 			fields = append(fields, zap.String("full-path", c.FullPath()))
-			fields = append(fields, zap.Any("request-header", c.Request.Header))
 
 			// request body
 			if strings.HasPrefix(c.Request.URL.Path, "/uploads/") {
@@ -75,4 +74,16 @@ func Ginzap(logger *zap.Logger) gin.HandlerFunc {
 
 func RecoveryWithZap(logger *zap.Logger, stack bool) gin.HandlerFunc {
 	return ginzap.RecoveryWithZap(logger, stack)
+}
+
+// maskAuthorization returns "Bearer ****" for Bearer tokens, or "****" for any non-empty value.
+func maskAuthorization(value string) string {
+	if value == "" {
+		return ""
+	}
+	parts := strings.SplitN(value, " ", 2)
+	if len(parts) == 2 {
+		return parts[0] + " ****"
+	}
+	return "****"
 }

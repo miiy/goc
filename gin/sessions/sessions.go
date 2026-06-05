@@ -12,6 +12,7 @@ import (
 
 type Store = sessions.Store
 type Session = sessions.Session
+type Options = sessions.Options
 
 var ErrUnsupportedJSONSessionStore = errors.New("sessions: JSON serializer is only supported by Redis store")
 var ErrUnsupportedRedisSessionStore = errors.New("sessions: operation is only supported by Redis store")

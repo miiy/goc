@@ -70,7 +70,11 @@ func (j *JWTAuth) keyFunc(token *jwt.Token) (interface{}, error) {
 
 // ParseToken parses and validates a JWT token string.
 func (j *JWTAuth) ParseToken(tokenString string) (*UserClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, j.keyFunc)
+	var opts []jwt.ParserOption
+	if j.options.Issuer != "" {
+		opts = append(opts, jwt.WithIssuer(j.options.Issuer))
+	}
+	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, j.keyFunc, opts...)
 	if err != nil {
 		return nil, err
 	}

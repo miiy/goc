@@ -1,42 +1,96 @@
 package time
 
-import "time"
+import (
+	"strings"
+	"time"
 
-// TodayBeginTime returns the today's begin time.
-func TodayBeginTime(t time.Time) time.Time {
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
-}
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
 
-// TodayEndTime returns the today's end time.
-func TodayEndTime(t time.Time) time.Time {
-	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 59, t.Location())
-}
+const (
+	// DateTimeLayout is the common "YYYY-MM-DD HH:mm:ss" display layout.
+	DateTimeLayout = "2006-01-02 15:04:05"
+	// DateMinuteLayout is the common "YYYY-MM-DD HH:mm" display layout.
+	DateMinuteLayout = "2006-01-02 15:04"
+)
 
-// NextDayBeginTime returns the next day's begin time.
-func NextDayBeginTime(t time.Time) time.Time {
-	nt := t.AddDate(0, 0, 1)
-	return time.Date(nt.Year(), nt.Month(), nt.Day(), 0, 0, 0, 0, nt.Location())
-}
-
-// NextWeekBeginTime returns the next week's begin time.
-func NextWeekBeginTime(t time.Time) time.Time {
-	offset := int(time.Monday - t.Weekday())
-	if offset > 0 {
-		offset = -6
+// LoadLocation loads a timezone by name and returns time.Local for an empty name.
+func LoadLocation(name string) (*time.Location, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return time.Local, nil
 	}
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).
-		AddDate(0, 0, offset).
-		AddDate(0, 0, 7)
+	return time.LoadLocation(name)
 }
 
-// NextMonthBeginTime returns the next month's begin time.
-func NextMonthBeginTime(t time.Time) time.Time {
-	nt := t.AddDate(0, 1, 0)
-	return time.Date(nt.Year(), nt.Month(), 1, 0, 0, 0, 0, nt.Location())
+// FormatDateTime formats supported time-like values with DateTimeLayout.
+func FormatDateTime(v any, loc *time.Location) string {
+	return FormatTime(v, loc, DateTimeLayout)
 }
 
-// NextYearBeginTime returns the next year's begin time.
-func NextYearBeginTime(t time.Time) time.Time {
-	nt := t.AddDate(1, 0, 0)
-	return time.Date(nt.Year(), 1, 1, 0, 0, 0, 0, nt.Location())
+// FormatTime formats supported time-like values with the given layout.
+func FormatTime(v any, loc *time.Location, layout string) string {
+	if strings.TrimSpace(layout) == "" {
+		layout = DateTimeLayout
+	}
+	t, ok := ParseTimeInLocation(v, loc)
+	if !ok {
+		if s, ok := v.(string); ok {
+			return strings.TrimSpace(s)
+		}
+		return ""
+	}
+	if t.IsZero() {
+		return ""
+	}
+	if loc != nil {
+		t = t.In(loc)
+	}
+	return t.Format(layout)
+}
+
+// ParseTime parses supported time-like values using time.Local for zoneless strings.
+func ParseTime(v any) (time.Time, bool) {
+	return ParseTimeInLocation(v, nil)
+}
+
+// ParseTimeInLocation parses supported time-like values using loc for zoneless strings.
+func ParseTimeInLocation(v any, loc *time.Location) (time.Time, bool) {
+	if loc == nil {
+		loc = time.Local
+	}
+	switch t := v.(type) {
+	case time.Time:
+		return t, true
+	case *time.Time:
+		if t == nil {
+			return time.Time{}, false
+		}
+		return *t, true
+	case *timestamppb.Timestamp:
+		if t == nil || !t.IsValid() {
+			return time.Time{}, false
+		}
+		return t.AsTime(), true
+	case string:
+		return parseTimeString(t, loc)
+	default:
+		return time.Time{}, false
+	}
+}
+
+func parseTimeString(s string, loc *time.Location) (time.Time, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return time.Time{}, false
+	}
+	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		return t, true
+	}
+	for _, layout := range []string{DateTimeLayout, DateMinuteLayout} {
+		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
 }

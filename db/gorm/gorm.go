@@ -1,11 +1,15 @@
 package gorm
 
 import (
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type DB = gorm.DB
+type Config = gorm.Config
+type Dialector = gorm.Dialector
+type Option = gorm.Option
 
 type Model struct {
 	ID        int64          `gorm:"column:id;primarykey"`
@@ -15,3 +19,7 @@ type Model struct {
 }
 
 var ErrRecordNotFound = gorm.ErrRecordNotFound
+
+func Open(dialector gorm.Dialector, opts ...gorm.Option) (*DB, error) {
+	return gorm.Open(dialector, opts...)
+}

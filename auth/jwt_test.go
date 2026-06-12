@@ -46,3 +46,14 @@ func TestParseTokenWithWrongSecret(t *testing.T) {
 		t.Fatal("expected error for wrong secret")
 	}
 }
+
+func TestParseTokenWithWrongIssuer(t *testing.T) {
+	auth1 := NewJWTAuth(&Options{Secret: "secret", Issuer: "other"})
+	auth2 := NewJWTAuth(&Options{Secret: "secret", Issuer: "goc"})
+
+	token, _ := auth1.CreateToken("user")
+	_, err := auth2.ParseToken(token)
+	if err == nil {
+		t.Fatal("expected error for wrong issuer")
+	}
+}

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -19,8 +20,9 @@ type Options struct {
 	ExpiresIn int64  `yaml:"expiresIn"`
 }
 
-// UserClaims represents JWT claims with a username.
+// UserClaims represents JWT claims with a user id and username.
 type UserClaims struct {
+	UserID   int64  `json:"user_id"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
@@ -32,14 +34,15 @@ func NewJWTAuth(o *Options) *JWTAuth {
 	return &JWTAuth{options: o}
 }
 
-// CreateClaims builds UserClaims for the given username.
-func (j *JWTAuth) CreateClaims(username string) *UserClaims {
+// CreateClaims builds UserClaims for the given user id and username.
+func (j *JWTAuth) CreateClaims(userID int64, username string) *UserClaims {
 	now := time.Now()
 	claims := &UserClaims{
+		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.options.Issuer,
-			Subject:   username,
+			Subject:   strconv.FormatInt(userID, 10),
 			NotBefore: jwt.NewNumericDate(now),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
@@ -56,13 +59,15 @@ func (j *JWTAuth) CreateTokenByClaims(claims jwt.Claims) (string, error) {
 	return token.SignedString([]byte(j.options.Secret))
 }
 
-// CreateToken creates a signed JWT token for the given username.
-func (j *JWTAuth) CreateToken(username string) (string, error) {
-	return j.CreateTokenByClaims(j.CreateClaims(username))
+// CreateToken creates a signed JWT token for the given user id and username.
+func (j *JWTAuth) CreateToken(userID int64, username string) (string, error) {
+	return j.CreateTokenByClaims(j.CreateClaims(userID, username))
 }
 
 func (j *JWTAuth) keyFunc(token *jwt.Token) (interface{}, error) {
-	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+	// Only HS256 is accepted; tokens signed with any other alg (HS384/HS512,
+	// RS256, "none", etc.) are rejected to prevent algorithm confusion.
+	if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 		return nil, ErrInvalidSigningMethod
 	}
 	return []byte(j.options.Secret), nil
@@ -71,6 +76,7 @@ func (j *JWTAuth) keyFunc(token *jwt.Token) (interface{}, error) {
 // ParseToken parses and validates a JWT token string.
 func (j *JWTAuth) ParseToken(tokenString string) (*UserClaims, error) {
 	var opts []jwt.ParserOption
+	opts = append(opts, jwt.WithExpirationRequired())
 	if j.options.Issuer != "" {
 		opts = append(opts, jwt.WithIssuer(j.options.Issuer))
 	}

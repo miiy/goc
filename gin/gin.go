@@ -11,6 +11,14 @@ type (
 	IRoutes     = gin.IRoutes
 )
 
+// Mode helpers re-exported so callers using goc/gin don't need gin-gonic/gin.
+var (
+	SetMode     = gin.SetMode
+	TestMode    = gin.TestMode
+	DebugMode   = gin.DebugMode
+	ReleaseMode = gin.ReleaseMode
+)
+
 func New() *Engine {
 	return gin.New()
 }

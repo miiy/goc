@@ -19,8 +19,14 @@ func TestGenerateCode(t *testing.T) {
 	}
 }
 
+func TestGenerateCodeRejectsInvalidDigits(t *testing.T) {
+	if _, err := GenerateCode(0); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestGenerateCodeDigitCounts(t *testing.T) {
-	for _, n := range []int{4, 6, 8} {
+	for _, n := range []int{4, 6, 8, 32} {
 		code, err := GenerateCode(n)
 		if err != nil {
 			t.Fatalf("GenerateCode(%d): %v", n, err)

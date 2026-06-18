@@ -7,10 +7,10 @@ import (
 	cryptorand "crypto/rand"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
-// Sender sends an SMS (e.g. a verification code) to a phone number. Implementations:
-// LogSender (development), or a real provider such as aliyun/tencent (production).
+// Sender sends an SMS to a phone number.
 type Sender interface {
 	Send(ctx context.Context, phone, content string) error
 }
@@ -18,10 +18,17 @@ type Sender interface {
 // GenerateCode returns a cryptographically random n-digit numeric code with uniform
 // distribution (no modulo bias). E.g. GenerateCode(6) -> "048291".
 func GenerateCode(digits int) (string, error) {
+	if digits <= 0 {
+		return "", fmt.Errorf("digits must be positive")
+	}
 	max := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(digits)), nil)
 	n, err := cryptorand.Int(cryptorand.Reader, max)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%0*d", digits, n.Int64()), nil
+	code := n.String()
+	if len(code) < digits {
+		code = strings.Repeat("0", digits-len(code)) + code
+	}
+	return code, nil
 }

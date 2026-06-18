@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestValidate(t *testing.T) {
@@ -27,5 +29,18 @@ func TestValidate(t *testing.T) {
 				t.Errorf("Validate(%q) error = %v, wantErr %v", tt.password, err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestHash(t *testing.T) {
+	hashed, err := Hash("password123")
+	if err != nil {
+		t.Fatalf("Hash() error = %v", err)
+	}
+	if hashed == "" {
+		t.Fatal("Hash() returned empty hash")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte("password123")); err != nil {
+		t.Fatalf("hash does not match password: %v", err)
 	}
 }

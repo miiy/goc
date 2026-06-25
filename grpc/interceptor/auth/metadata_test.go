@@ -24,7 +24,7 @@ func TestMetadataAuthFunc(t *testing.T) {
 				gauth.AuthenticatedUserIDMetadataKey, "42",
 				gauth.AuthenticatedUsernameMetadataKey, "alice",
 			),
-			wantUser: &gauth.AuthenticatedUser{ID: 42, Username: "alice"},
+			wantUser: &gauth.AuthenticatedUser{ID: "42", Username: "alice"},
 		},
 		{
 			name: "missing user id",
@@ -37,22 +37,6 @@ func TestMetadataAuthFunc(t *testing.T) {
 			name: "missing username",
 			metadata: metadata.Pairs(
 				gauth.AuthenticatedUserIDMetadataKey, "42",
-			),
-			wantCode: codes.Unauthenticated,
-		},
-		{
-			name: "invalid user id",
-			metadata: metadata.Pairs(
-				gauth.AuthenticatedUserIDMetadataKey, "bad",
-				gauth.AuthenticatedUsernameMetadataKey, "alice",
-			),
-			wantCode: codes.Unauthenticated,
-		},
-		{
-			name: "zero user id",
-			metadata: metadata.Pairs(
-				gauth.AuthenticatedUserIDMetadataKey, "0",
-				gauth.AuthenticatedUsernameMetadataKey, "alice",
 			),
 			wantCode: codes.Unauthenticated,
 		},
@@ -80,6 +64,25 @@ func TestMetadataAuthFunc(t *testing.T) {
 				t.Fatalf("unexpected authenticated user: %+v", user)
 			}
 		})
+	}
+}
+
+func TestMetadataAuthFuncAcceptsOpaqueUserID(t *testing.T) {
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		gauth.AuthenticatedUserIDMetadataKey, "user-abc",
+		gauth.AuthenticatedUsernameMetadataKey, "alice",
+	))
+
+	ctx, err := MetadataAuthFunc(ctx)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	user, err := gauth.ExtractAuthenticatedUser(ctx)
+	if err != nil {
+		t.Fatalf("expected authenticated user, got %v", err)
+	}
+	if user.ID != "user-abc" {
+		t.Fatalf("expected opaque user id, got %q", user.ID)
 	}
 }
 

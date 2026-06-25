@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	gauth "github.com/miiy/goc/auth"
@@ -22,13 +21,6 @@ func MetadataAuthFunc(ctx context.Context) (context.Context, error) {
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing authenticated user id")
 	}
-	id, err := strconv.ParseInt(userID, 10, 64)
-	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid authenticated user id: %v", err)
-	}
-	if id <= 0 {
-		return nil, status.Error(codes.Unauthenticated, "invalid authenticated user id")
-	}
 
 	username, ok := metadataValue(md, gauth.AuthenticatedUsernameMetadataKey)
 	if !ok {
@@ -36,7 +28,7 @@ func MetadataAuthFunc(ctx context.Context) (context.Context, error) {
 	}
 
 	return gauth.InjectAuthenticatedUser(ctx, &gauth.AuthenticatedUser{
-		ID:       id,
+		ID:       userID,
 		Username: username,
 	}), nil
 }

@@ -3,12 +3,26 @@ package auth
 import (
 	"context"
 	"errors"
+	"strconv"
 )
 
 // AuthenticatedUser represents the authenticated user stored in context.
 type AuthenticatedUser struct {
-	ID       int64  `json:"id"`
+	ID       string `json:"id"`
 	Username string `json:"username"`
+}
+
+// Int64ID returns the authenticated user ID as int64 for applications that use
+// numeric user IDs internally.
+func (u *AuthenticatedUser) Int64ID() (int64, error) {
+	if u == nil || u.ID == "" {
+		return 0, ErrAuthenticatedUserNotFound
+	}
+	id, err := strconv.ParseInt(u.ID, 10, 64)
+	if err != nil || id <= 0 {
+		return 0, ErrInvalidAuthenticatedUserID
+	}
+	return id, nil
 }
 
 // UserProvider looks up users by identifier.
@@ -25,6 +39,9 @@ const (
 
 // ErrAuthenticatedUserNotFound is returned when no authenticated user is found in context.
 var ErrAuthenticatedUserNotFound = errors.New("auth: authenticated user not found")
+
+// ErrInvalidAuthenticatedUserID is returned when an authenticated user's ID cannot be used as a positive int64.
+var ErrInvalidAuthenticatedUserID = errors.New("auth: invalid authenticated user id")
 
 type authenticatedUserContextKey string
 

@@ -1,9 +1,11 @@
 package cors
 
 import (
-	"github.com/gin-contrib/cors"
+	gincors "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
+
+type Config = gincors.Config
 
 var DefaultAllowOrigins = []string{
 	"http://localhost:3000",
@@ -12,17 +14,21 @@ var DefaultAllowOrigins = []string{
 	"http://127.0.0.1:8080",
 }
 
+func DefaultConfig() Config {
+	return gincors.DefaultConfig()
+}
+
 func New(allowOrigins ...string) gin.HandlerFunc {
 	if len(allowOrigins) == 0 {
 		allowOrigins = DefaultAllowOrigins
 	}
 
-	config := cors.DefaultConfig()
+	config := DefaultConfig()
 	config.AllowOrigins = append([]string(nil), allowOrigins...)
 	config.AddAllowHeaders("Authorization")
 	return NewWithConfig(config)
 }
 
-func NewWithConfig(config cors.Config) gin.HandlerFunc {
-	return cors.New(config)
+func NewWithConfig(config Config) gin.HandlerFunc {
+	return gincors.New(config)
 }

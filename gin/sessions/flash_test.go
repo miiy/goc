@@ -85,3 +85,20 @@ func TestFlashesIgnoresUnexpectedValues(t *testing.T) {
 		t.Fatalf("unexpected flashes: %#v", flashes)
 	}
 }
+
+func TestFlashesReadsJSONDecodedFlash(t *testing.T) {
+	session := newTestSession()
+	session.flashes[flashSessionKey] = []interface{}{
+		map[string]interface{}{
+			"level":   FlashLevelError,
+			"message": "注册暂未开放",
+		},
+	}
+
+	flashes := flashes(session)
+
+	want := Flash{Level: FlashLevelError, Message: "注册暂未开放"}
+	if len(flashes) != 1 || flashes[0] != want {
+		t.Fatalf("unexpected flashes: %#v", flashes)
+	}
+}

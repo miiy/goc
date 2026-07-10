@@ -52,11 +52,19 @@ func flashes(session flashSession) []Flash {
 
 	flashes := make([]Flash, 0, len(values))
 	for _, value := range values {
-		flash, ok := value.(Flash)
-		if !ok {
+		switch v := value.(type) {
+		case Flash:
+			flashes = append(flashes, v)
+		case map[string]interface{}:
+			level, levelOK := v["level"].(string)
+			message, messageOK := v["message"].(string)
+			if !levelOK || !messageOK {
+				continue
+			}
+			flashes = append(flashes, Flash{Level: level, Message: message})
+		default:
 			continue
 		}
-		flashes = append(flashes, flash)
 	}
 	return flashes
 }

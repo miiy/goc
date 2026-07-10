@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	gincors "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -49,7 +48,7 @@ func TestNewAllowsConfiguredOrigin(t *testing.T) {
 }
 
 func TestNewWithConfigSupportsCredentials(t *testing.T) {
-	config := gincors.DefaultConfig()
+	config := DefaultConfig()
 	config.AllowOrigins = []string{"https://app.example.com"}
 	config.AllowCredentials = true
 	router := testRouter(NewWithConfig(config))

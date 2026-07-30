@@ -64,12 +64,7 @@ func newTestContext(method, target, body string) (*gin.Context, *httptest.Respon
 	if target == "" {
 		target = "/"
 	}
-	var reader *strings.Reader
-	if body == "" {
-		reader = strings.NewReader("")
-	} else {
-		reader = strings.NewReader(body)
-	}
+	reader := strings.NewReader(body)
 	c.Request = httptest.NewRequest(method, target, reader)
 	if body != "" {
 		c.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -107,7 +102,7 @@ func TestTokenUsesExistingSessionToken(t *testing.T) {
 	}
 }
 
-func TestTokenCachesTokenInContext(t *testing.T) {
+func TestTokenReusesSessionToken(t *testing.T) {
 	c, _, session := newTestContext(http.MethodGet, "/", "")
 
 	first := Token(c)
@@ -115,10 +110,10 @@ func TestTokenCachesTokenInContext(t *testing.T) {
 	second := Token(c)
 
 	if first == "" || second != first {
-		t.Fatalf("expected cached token %q, got %q", first, second)
+		t.Fatalf("expected session token %q, got %q", first, second)
 	}
 	if session.saved {
-		t.Fatal("expected cached token not to save session")
+		t.Fatal("expected existing token not to save session")
 	}
 }
 
@@ -132,15 +127,138 @@ func TestTokenReportsSaveError(t *testing.T) {
 	if len(c.Errors) != 1 {
 		t.Fatalf("expected one context error, got %d", len(c.Errors))
 	}
+	if token := session.Get(SessionKey); token != nil {
+		t.Fatalf("expected failed token to be removed, got %#v", token)
+	}
+}
+
+func TestTokenReportsGenerationError(t *testing.T) {
+	c, _, session := newTestContext(http.MethodGet, "/", "")
+
+	token := Token(c, optionFunc(func(opts *options) {
+		opts.tokenGenerator = func() (string, error) {
+			return "", errors.New("generate failed")
+		}
+	}))
+
+	if token != "" {
+		t.Fatalf("expected empty token on generation error, got %q", token)
+	}
+	if len(c.Errors) != 1 {
+		t.Fatalf("expected one context error, got %d", len(c.Errors))
+	}
+	if session.saved {
+		t.Fatal("expected session not to be saved")
+	}
+}
+
+func TestRotateTokenReplacesExistingToken(t *testing.T) {
+	c, _, session := newTestContext(http.MethodGet, "/", "")
+	session.Set(SessionKey, "existing")
+
+	token := RotateToken(c)
+
+	if token == "" || token == "existing" {
+		t.Fatalf("expected a new token, got %q", token)
+	}
+	if got := session.Get(SessionKey); got != token {
+		t.Fatalf("expected session token %q, got %#v", token, got)
+	}
+	if !session.saved {
+		t.Fatal("expected session to be saved")
+	}
+}
+
+func TestRotateTokenPreservesExistingTokenOnSaveError(t *testing.T) {
+	c, _, session := newTestContext(http.MethodGet, "/", "")
+	session.Set(SessionKey, "existing")
+	session.saveErr = errors.New("save failed")
+
+	if token := RotateToken(c); token != "" {
+		t.Fatalf("expected empty token on save error, got %q", token)
+	}
+	if got := session.Get(SessionKey); got != "existing" {
+		t.Fatalf("expected existing token to be preserved, got %#v", got)
+	}
 }
 
 func TestMiddlewareAllowsSafeMethods(t *testing.T) {
-	c, _, _ := newTestContext(http.MethodGet, "/", "")
+	for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodOptions} {
+		t.Run(method, func(t *testing.T) {
+			c, _, _ := newTestContext(method, "/", "")
 
-	Middleware()(c)
+			Middleware()(c)
 
+			if c.IsAborted() {
+				t.Fatal("expected safe method not to abort")
+			}
+		})
+	}
+}
+
+func TestCheckerValidatesWithoutContinuingGinChain(t *testing.T) {
+	checker, err := NewChecker()
+	if err != nil {
+		t.Fatalf("new checker: %v", err)
+	}
+	c, _, session := newTestContext(http.MethodPost, "/", "")
+	c.Request.Header.Set(HeaderName, "expected")
+	session.Set(SessionKey, "expected")
+
+	if !checker.Check(c) {
+		t.Fatal("expected matching token to pass")
+	}
 	if c.IsAborted() {
-		t.Fatal("expected safe method not to abort")
+		t.Fatal("expected valid request not to abort")
+	}
+}
+
+func TestCheckerRejectsInvalidToken(t *testing.T) {
+	checker, err := NewChecker()
+	if err != nil {
+		t.Fatalf("new checker: %v", err)
+	}
+	c, recorder, session := newTestContext(http.MethodPost, "/", "")
+	c.Request.Header.Set(HeaderName, "invalid")
+	session.Set(SessionKey, "expected")
+
+	if checker.Check(c) {
+		t.Fatal("expected invalid token to fail")
+	}
+	if !c.IsAborted() {
+		t.Fatal("expected request to be aborted")
+	}
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected status 403, got %d", recorder.Code)
+	}
+}
+
+func TestNewCheckerRejectsInvalidTrustedOrigin(t *testing.T) {
+	checker, err := NewChecker(WithTrustedOrigins("app.example"))
+	if err == nil {
+		t.Fatal("expected invalid trusted origin error")
+	}
+	if checker != nil {
+		t.Fatal("expected checker to be nil")
+	}
+}
+
+func TestCheckerValidatesWithPreparedTrustedOrigins(t *testing.T) {
+	checker, err := NewChecker(WithTrustedOrigins("https://app.example"))
+	if err != nil {
+		t.Fatalf("new checker: %v", err)
+	}
+	c, _, session := newTestContext(http.MethodPost, "/", "")
+	c.Request.Header.Set(HeaderName, "expected")
+	c.Request.Header.Set("Origin", "https://app.example")
+	c.Request.Header.Set("Sec-Fetch-Site", "cross-site")
+	session.Set(SessionKey, "expected")
+
+	if !checker.Check(c) {
+		t.Fatal("expected trusted origin with matching token to pass")
+	}
+	if c.IsAborted() {
+		t.Fatal("expected valid request not to abort")
 	}
 }
 
@@ -156,6 +274,86 @@ func TestMiddlewareRejectsMissingToken(t *testing.T) {
 	if recorder.Code != http.StatusForbidden {
 		t.Fatalf("expected status 403, got %d", recorder.Code)
 	}
+}
+
+func TestMiddlewareRejectsInvalidToken(t *testing.T) {
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		t.Run(method, func(t *testing.T) {
+			c, recorder, session := newTestContext(method, "/", "")
+			c.Request.Header.Set(HeaderName, "invalid")
+			session.Set(SessionKey, "expected")
+
+			Middleware()(c)
+
+			if !c.IsAborted() {
+				t.Fatal("expected request to be aborted")
+			}
+			if recorder.Code != http.StatusForbidden {
+				t.Fatalf("expected status 403, got %d", recorder.Code)
+			}
+		})
+	}
+}
+
+func TestMiddlewareValidatesRequestOrigin(t *testing.T) {
+	tests := []struct {
+		name         string
+		origin       string
+		secFetchSite string
+		want         int
+	}{
+		{name: "same origin", origin: "http://example.com", want: http.StatusOK},
+		{name: "foreign origin", origin: "https://attacker.example", want: http.StatusForbidden},
+		{name: "null origin", origin: "null", want: http.StatusForbidden},
+		{name: "same-origin fetch", secFetchSite: "same-origin", want: http.StatusOK},
+		{name: "browser navigation", secFetchSite: "none", want: http.StatusOK},
+		{name: "same-site fetch", secFetchSite: "same-site", want: http.StatusForbidden},
+		{name: "cross-site fetch", secFetchSite: "cross-site", want: http.StatusForbidden},
+		{name: "no source headers", want: http.StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, recorder, session := newTestContext(http.MethodPost, "/", "")
+			c.Request.Header.Set(HeaderName, "expected")
+			if tt.origin != "" {
+				c.Request.Header.Set("Origin", tt.origin)
+			}
+			if tt.secFetchSite != "" {
+				c.Request.Header.Set("Sec-Fetch-Site", tt.secFetchSite)
+			}
+			session.Set(SessionKey, "expected")
+
+			Middleware()(c)
+
+			if recorder.Code != tt.want {
+				t.Fatalf("expected status %d, got %d", tt.want, recorder.Code)
+			}
+		})
+	}
+}
+
+func TestMiddlewareAllowsTrustedOrigin(t *testing.T) {
+	c, _, session := newTestContext(http.MethodPost, "/", "")
+	c.Request.Header.Set(HeaderName, "expected")
+	c.Request.Header.Set("Origin", "https://app.example")
+	c.Request.Header.Set("Sec-Fetch-Site", "cross-site")
+	session.Set(SessionKey, "expected")
+
+	Middleware(WithTrustedOrigins("https://app.example"))(c)
+
+	if c.IsAborted() {
+		t.Fatal("expected trusted origin not to abort")
+	}
+}
+
+func TestMiddlewareRejectsInvalidTrustedOrigin(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected invalid trusted origin to panic")
+		}
+	}()
+
+	Middleware(WithTrustedOrigins("app.example"))
 }
 
 func TestMiddlewareAcceptsFormToken(t *testing.T) {

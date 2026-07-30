@@ -68,10 +68,6 @@ func (s *Server) Run(addr ...string) {
 }
 
 func (s *Server) RunContext(ctx context.Context, addr ...string) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	address := resolveAddress(addr, s.addr)
 	logger := s.logger
 	if logger == nil {

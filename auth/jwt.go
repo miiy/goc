@@ -1,91 +1,189 @@
 package auth
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/base64"
 	"errors"
-	"strconv"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// JWTAuth handles JWT token creation and parsing.
-type JWTAuth struct {
-	options *Options
+const (
+	accessTokenType = "at+jwt"
+)
+
+var (
+	ErrInvalidConfig = errors.New("auth: invalid JWT configuration")
+	ErrInvalidClaims = errors.New("auth: invalid JWT claims")
+	ErrInvalidToken  = errors.New("auth: invalid JWT")
+
+	errInvalidTokenType = errors.New("invalid token type")
+)
+
+// VerifierConfig configures token verification.
+type VerifierConfig struct {
+	Issuer       string
+	Audience     string
+	PublicKeyPEM string
+	Leeway       time.Duration
 }
 
-// Options configures JWTAuth.
-type Options struct {
-	Secret    string `yaml:"secret"`
-	Issuer    string `yaml:"issuer"`
-	ExpiresIn int64  `yaml:"expiresIn"`
+// IssuerConfig configures token issuance. PrivateKeyPEM must contain a PKCS1
+// or PKCS8 RSA private key.
+type IssuerConfig struct {
+	Issuer              string
+	Audience            string
+	PrivateKeyPEM       string
+	AccessTokenLifetime time.Duration
 }
 
-// UserClaims represents JWT claims with a user id and username.
-type UserClaims struct {
-	UserID   int64  `json:"user_id"`
-	Username string `json:"username"`
+// Claims contains the identity and session data carried by an access token.
+// Subject is the stable user identifier; Username is display-only.
+type Claims struct {
+	Username   string `json:"username"`
+	SessionID  string `json:"sid"`
+	ClientID   string `json:"client_id"`
+	ClientType string `json:"client_type"`
 	jwt.RegisteredClaims
 }
 
-var ErrInvalidSigningMethod = errors.New("jwt auth: invalid signing method")
-
-// NewJWTAuth creates a new JWTAuth instance.
-func NewJWTAuth(o *Options) *JWTAuth {
-	return &JWTAuth{options: o}
+// Verifier verifies application access tokens with a trusted public key.
+type Verifier struct {
+	issuer    string
+	audience  string
+	publicKey *rsa.PublicKey
+	leeway    time.Duration
 }
 
-// CreateClaims builds UserClaims for the given user id and username.
-func (j *JWTAuth) CreateClaims(userID int64, username string) *UserClaims {
-	now := time.Now()
-	claims := &UserClaims{
-		UserID:   userID,
-		Username: username,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    j.options.Issuer,
-			Subject:   strconv.FormatInt(userID, 10),
-			NotBefore: jwt.NewNumericDate(now),
-			IssuedAt:  jwt.NewNumericDate(now),
-		},
+// Issuer signs access tokens. Verification is provided independently by
+// Verifier.
+type Issuer struct {
+	issuer     string
+	audience   string
+	privateKey *rsa.PrivateKey
+	lifetime   time.Duration
+}
+
+// NewVerifier validates verification config and parses the trusted public key.
+func NewVerifier(config VerifierConfig) (*Verifier, error) {
+	if config.Issuer == "" || config.Audience == "" || config.PublicKeyPEM == "" || config.Leeway < 0 {
+		return nil, ErrInvalidConfig
 	}
-	if j.options.ExpiresIn > 0 {
-		claims.ExpiresAt = jwt.NewNumericDate(now.Add(time.Second * time.Duration(j.options.ExpiresIn)))
-	}
-	return claims
-}
-
-// CreateTokenByClaims creates a signed JWT token from custom claims.
-func (j *JWTAuth) CreateTokenByClaims(claims jwt.Claims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(j.options.Secret))
-}
-
-// CreateToken creates a signed JWT token for the given user id and username.
-func (j *JWTAuth) CreateToken(userID int64, username string) (string, error) {
-	return j.CreateTokenByClaims(j.CreateClaims(userID, username))
-}
-
-func (j *JWTAuth) keyFunc(token *jwt.Token) (interface{}, error) {
-	// Only HS256 is accepted; tokens signed with any other alg (HS384/HS512,
-	// RS256, "none", etc.) are rejected to prevent algorithm confusion.
-	if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
-		return nil, ErrInvalidSigningMethod
-	}
-	return []byte(j.options.Secret), nil
-}
-
-// ParseToken parses and validates a JWT token string.
-func (j *JWTAuth) ParseToken(tokenString string) (*UserClaims, error) {
-	var opts []jwt.ParserOption
-	opts = append(opts, jwt.WithExpirationRequired())
-	if j.options.Issuer != "" {
-		opts = append(opts, jwt.WithIssuer(j.options.Issuer))
-	}
-	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, j.keyFunc, opts...)
+	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(config.PublicKeyPEM))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: public key: %v", ErrInvalidConfig, err)
 	}
-	if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
-		return claims, nil
+	return &Verifier{
+		issuer:    config.Issuer,
+		audience:  config.Audience,
+		publicKey: publicKey,
+		leeway:    config.Leeway,
+	}, nil
+}
+
+// NewIssuer validates signing config and parses its active RS256 private key.
+func NewIssuer(config IssuerConfig) (*Issuer, error) {
+	if config.Issuer == "" || config.Audience == "" || config.PrivateKeyPEM == "" || config.AccessTokenLifetime < jwt.TimePrecision {
+		return nil, ErrInvalidConfig
 	}
-	return nil, jwt.ErrTokenMalformed
+	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.PrivateKeyPEM))
+	if err != nil {
+		return nil, fmt.Errorf("%w: private key: %v", ErrInvalidConfig, err)
+	}
+	return &Issuer{
+		issuer:     config.Issuer,
+		audience:   config.Audience,
+		privateKey: privateKey,
+		lifetime:   config.AccessTokenLifetime,
+	}, nil
+}
+
+// CreateClaims creates access-token claims for an authenticated application session.
+func (i *Issuer) CreateClaims(subject string, username string, sessionID string, clientID string, clientType string) (*Claims, error) {
+	if subject == "" {
+		return nil, ErrInvalidClaims
+	}
+
+	issuedAt := time.Now().UTC()
+	expiresAt := issuedAt.Add(i.lifetime)
+	issuedAtClaim := jwt.NewNumericDate(issuedAt)
+	expiresAtClaim := jwt.NewNumericDate(expiresAt)
+	jwtID, err := generateJWTID()
+	if err != nil {
+		return nil, fmt.Errorf("auth: generate JWT ID: %w", err)
+	}
+	return &Claims{
+		Username:   username,
+		SessionID:  sessionID,
+		ClientID:   clientID,
+		ClientType: clientType,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    i.issuer,
+			Subject:   subject,
+			Audience:  jwt.ClaimStrings{i.audience},
+			IssuedAt:  issuedAtClaim,
+			ExpiresAt: expiresAtClaim,
+			ID:        jwtID,
+		},
+	}, nil
+}
+
+// CreateTokenByClaims signs claims with RS256.
+func (i *Issuer) CreateTokenByClaims(claims jwt.Claims) (string, error) {
+	if claims == nil {
+		return "", ErrInvalidClaims
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["typ"] = accessTokenType
+	value, err := token.SignedString(i.privateKey)
+	if err != nil {
+		return "", fmt.Errorf("auth: sign JWT: %w", err)
+	}
+	return value, nil
+}
+
+// CreateToken creates an access token for an authenticated application session.
+func (i *Issuer) CreateToken(subject, username, sessionID, clientID, clientType string) (string, error) {
+	claims, err := i.CreateClaims(subject, username, sessionID, clientID, clientType)
+	if err != nil {
+		return "", err
+	}
+	return i.CreateTokenByClaims(claims)
+}
+
+// ParseToken parses and validates an encoded access token.
+func (v *Verifier) ParseToken(value string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(value, claims, func(*jwt.Token) (any, error) {
+		return v.publicKey, nil
+	},
+		jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}),
+		jwt.WithIssuer(v.issuer),
+		jwt.WithAudience(v.audience),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+		jwt.WithLeeway(v.leeway),
+	)
+	if err != nil {
+		return nil, invalidTokenError(err)
+	}
+	if tokenType, ok := token.Header["typ"].(string); !ok || tokenType != accessTokenType {
+		return nil, invalidTokenError(errInvalidTokenType)
+	}
+	return claims, nil
+}
+
+func invalidTokenError(err error) error {
+	return fmt.Errorf("%w: %v", ErrInvalidToken, err)
+}
+
+func generateJWTID() (string, error) {
+	var value [32]byte
+	if _, err := rand.Read(value[:]); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(value[:]), nil
 }

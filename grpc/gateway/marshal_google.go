@@ -20,9 +20,9 @@ type GoogleErrorResponse struct {
 }
 
 type GoogleErrorStatus struct {
-	Code    int32         `json:"code"`
-	Message string        `json:"message"`
-	Status  string        `json:"status,omitempty"`
+	Code    int32        `json:"code"`
+	Message string       `json:"message"`
+	Status  string       `json:"status,omitempty"`
 	Details []*anypb.Any `json:"details,omitempty"`
 }
 

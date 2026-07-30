@@ -39,3 +39,21 @@ func TestRunContextReturnsListenError(t *testing.T) {
 		t.Fatal("expected listen error")
 	}
 }
+
+func TestRunContextPanicsOnNilContext(t *testing.T) {
+	server := New(WithLogger(zap.NewNop()))
+
+	requirePanic(t, func() {
+		server.RunContext(nil, "127.0.0.1:-1")
+	})
+}
+
+func requirePanic(t *testing.T, fn func()) {
+	t.Helper()
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic")
+		}
+	}()
+	fn()
+}

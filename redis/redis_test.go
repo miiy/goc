@@ -2,8 +2,20 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	upstream "github.com/redis/go-redis/v9"
 )
+
+func TestIsNil(t *testing.T) {
+	if !IsNil(upstream.Nil) {
+		t.Fatal("redis.Nil was not recognized")
+	}
+	if IsNil(errors.New("other error")) {
+		t.Fatal("non-nil Redis error was recognized as redis.Nil")
+	}
+}
 
 func TestNewRedis(t *testing.T) {
 	rdb, err := NewRedis(&Options{

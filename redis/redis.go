@@ -1,12 +1,16 @@
 package redis
 
 import (
+	"errors"
 	"github.com/redis/go-redis/v9"
 	"math"
 	"runtime"
 )
 
 type UniversalClient = redis.UniversalClient
+
+// IsNil reports whether a Redis command failed because its key does not exist.
+func IsNil(err error) bool { return errors.Is(err, redis.Nil) }
 
 type Options struct {
 	Addrs    []string `yaml:"addrs"`

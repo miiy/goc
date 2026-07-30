@@ -3,8 +3,10 @@ package sessions
 import ginsessions "github.com/gin-contrib/sessions"
 
 type testSession struct {
+	id      string
 	values  map[interface{}]interface{}
 	flashes map[string][]interface{}
+	options ginsessions.Options
 	saveErr error
 	saved   bool
 }
@@ -16,7 +18,7 @@ func newTestSession() *testSession {
 	}
 }
 
-func (s *testSession) ID() string { return "" }
+func (s *testSession) ID() string { return s.id }
 
 func (s *testSession) Get(key interface{}) interface{} {
 	return s.values[key]
@@ -55,7 +57,9 @@ func (s *testSession) Flashes(vars ...string) []interface{} {
 	return values
 }
 
-func (s *testSession) Options(ginsessions.Options) {}
+func (s *testSession) Options(options ginsessions.Options) {
+	s.options = options
+}
 
 func (s *testSession) Save() error {
 	s.saved = true

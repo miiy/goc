@@ -40,6 +40,23 @@ func TestMetadataAuthFunc(t *testing.T) {
 			),
 			wantCode: codes.Unauthenticated,
 		},
+		{
+			name: "repeated user id",
+			metadata: metadata.Pairs(
+				gauth.AuthenticatedUserIDMetadataKey, "42",
+				gauth.AuthenticatedUserIDMetadataKey, "43",
+			),
+			wantCode: codes.Unauthenticated,
+		},
+		{
+			name: "repeated username",
+			metadata: metadata.Pairs(
+				gauth.AuthenticatedUserIDMetadataKey, "42",
+				gauth.AuthenticatedUsernameMetadataKey, "alice",
+				gauth.AuthenticatedUsernameMetadataKey, "mallory",
+			),
+			wantCode: codes.Unauthenticated,
+		},
 	}
 
 	for _, tt := range tests {
@@ -56,12 +73,16 @@ func TestMetadataAuthFunc(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
-			user, err := gauth.ExtractAuthenticatedUser(ctx)
+			session, err := gauth.ExtractAuthenticatedSession(ctx)
 			if err != nil {
-				t.Fatalf("expected authenticated user, got %v", err)
+				t.Fatalf("expected authenticated session, got %v", err)
 			}
+			user := &session.User
 			if user.ID != tt.wantUser.ID || user.Username != tt.wantUser.Username {
 				t.Fatalf("unexpected authenticated user: %+v", user)
+			}
+			if session.SIDKey != "" || session.ClientType != "" || session.ClientID != "" {
+				t.Fatalf("gRPC unexpectedly propagated session metadata: %+v", session)
 			}
 		})
 	}
@@ -77,10 +98,11 @@ func TestMetadataAuthFuncAcceptsOpaqueUserID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	user, err := gauth.ExtractAuthenticatedUser(ctx)
+	session, err := gauth.ExtractAuthenticatedSession(ctx)
 	if err != nil {
-		t.Fatalf("expected authenticated user, got %v", err)
+		t.Fatalf("expected authenticated session, got %v", err)
 	}
+	user := &session.User
 	if user.ID != "user-abc" {
 		t.Fatalf("expected opaque user id, got %q", user.ID)
 	}
@@ -94,7 +116,7 @@ func TestMetadataAuthFuncMissingMetadata(t *testing.T) {
 	if ctx != nil {
 		t.Fatalf("expected nil context, got %v", ctx)
 	}
-	if errors.Is(err, gauth.ErrAuthenticatedUserNotFound) {
+	if errors.Is(err, gauth.ErrAuthenticatedSessionNotFound) {
 		t.Fatal("expected gRPC status error")
 	}
 }

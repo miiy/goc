@@ -16,11 +16,13 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const testSessionCookieName = "test-session"
+
 func TestAuthenticateRejectsUnknownSession(t *testing.T) {
 	store, cookie := protectedSession(t, "unknown-sid")
 	resolverCalled := false
 	router := gin.New()
-	router.Use(gocsessions.Middleware(gocsessions.DefaultSessionCookieName, store))
+	router.Use(gocsessions.Middleware(testSessionCookieName, store))
 	router.Use(Authenticate(func(_ context.Context, sid string) (*auth.AuthenticatedSession, error) {
 		resolverCalled = true
 		if sid != "unknown-sid" {
@@ -64,7 +66,7 @@ func TestAuthenticateInjectsTrustedSession(t *testing.T) {
 		t.Fatalf("protected Cookie exposed raw sid: %q", cookie.Value)
 	}
 	r := gin.New()
-	r.Use(gocsessions.Middleware(gocsessions.DefaultSessionCookieName, store))
+	r.Use(gocsessions.Middleware(testSessionCookieName, store))
 	r.Use(Authenticate(func(_ context.Context, sid string) (*auth.AuthenticatedSession, error) {
 		if sid != "session-id" {
 			return nil, errors.New("unexpected sid")
@@ -127,15 +129,12 @@ func TestAuthenticateUsesCustomSessionCookieName(t *testing.T) {
 
 func protectedSession(t *testing.T, sid string) (gocsessions.Store, *http.Cookie) {
 	t.Helper()
-	return protectedSessionWithCookieName(t, sid, gocsessions.DefaultSessionCookieName)
+	return protectedSessionWithCookieName(t, sid, testSessionCookieName)
 }
 
 func protectedSessionWithCookieName(t *testing.T, sid string, name string) (gocsessions.Store, *http.Cookie) {
 	t.Helper()
 	name = strings.TrimSpace(name)
-	if name == "" {
-		name = gocsessions.DefaultSessionCookieName
-	}
 	store := filesystem.NewStore(
 		t.TempDir(),
 		[]byte("0123456789abcdef0123456789abcdef"),

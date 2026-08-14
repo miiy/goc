@@ -25,18 +25,9 @@ func TestSetMaxAgeRejectsUnsupportedStore(t *testing.T) {
 	}
 }
 
-func TestSessionManagerDefaultsBlankCookieName(t *testing.T) {
-	for _, name := range []string{"", "  "} {
-		manager := NewSessionManager(nil, Options{}, WithCookieName(name))
-		if manager.CookieName() != DefaultSessionCookieName {
-			t.Fatalf("blank manager cookie name = %q, want %q", manager.CookieName(), DefaultSessionCookieName)
-		}
-	}
-}
-
 func TestSessionManagerKeepsConfigAndDelegates(t *testing.T) {
 	store := &recordingStore{}
-	manager := NewSessionManager(store, Options{Path: "/", MaxAge: 600, HttpOnly: true}, WithCookieName("custom-session"))
+	manager := NewSessionManager(store, "custom-session", Options{Path: "/", MaxAge: 600, HttpOnly: true})
 
 	if manager.CookieName() != "custom-session" {
 		t.Fatalf("manager cookie name = %q, want custom-session", manager.CookieName())

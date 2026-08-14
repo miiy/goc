@@ -1,40 +1,14 @@
 package zap
 
 import (
-	"bytes"
+	"strings"
+	"time"
+
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"io"
-	"strings"
-	"time"
 )
-
-type responseBodyWriter struct {
-	gin.ResponseWriter
-	body *bytes.Buffer
-}
-
-func (w *responseBodyWriter) Write(b []byte) (int, error) {
-	if count, err := w.body.Write(b); err != nil {
-		return count, err
-	}
-	return w.ResponseWriter.Write(b)
-}
-
-func ResponseBodyBuffer() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// response body
-		w := &responseBodyWriter{
-			ResponseWriter: c.Writer,
-			body:           &bytes.Buffer{},
-		}
-		c.Writer = w
-		// next
-		c.Next()
-	}
-}
 
 func Ginzap(logger *zap.Logger) gin.HandlerFunc {
 	return ginzap.GinzapWithConfig(logger, &ginzap.Config{
@@ -46,26 +20,15 @@ func Ginzap(logger *zap.Logger) gin.HandlerFunc {
 				fields = append(fields, zap.String("request-id", requestID))
 			}
 
-			fields = append(fields, zap.String("host", c.Request.Host))
-			fields = append(fields, zap.String("remote-addr", c.Request.RemoteAddr))
-			fields = append(fields, zap.String("authorization", maskAuthorization(c.Request.Header.Get("Authorization"))))
-			fields = append(fields, zap.String("full-path", c.FullPath()))
-
-			// request body
-			if strings.HasPrefix(c.Request.URL.Path, "/uploads/") {
-				return
-			}
-			var body []byte
-			var buf bytes.Buffer
-			tee := io.TeeReader(c.Request.Body, &buf)
-			body, _ = io.ReadAll(tee)
-			c.Request.Body = io.NopCloser(&buf)
-			fields = append(fields, zap.String("request-body", string(body)))
-
-			w, ok := c.Writer.(*responseBodyWriter)
-			if ok {
-				fields = append(fields, zap.String("response-body", w.body.String()))
-			}
+			fields = append(fields,
+				zap.String("host", c.Request.Host),
+				zap.String("remote-addr", c.Request.RemoteAddr),
+				zap.String("authorization", maskAuthorization(c.Request.Header.Get("Authorization"))),
+				zap.String("full-path", c.FullPath()),
+				zap.String("sign", c.Request.Header.Get("sign")),
+				zap.String("ts", c.Request.Header.Get("ts")),
+				zap.Int("size", c.Writer.Size()),
+			)
 
 			return
 		},

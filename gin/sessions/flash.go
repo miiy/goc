@@ -40,6 +40,9 @@ func AddFlash(c *gin.Context, flashLevel, message string) error {
 // Flashes returns and clears flash messages from the session.
 func Flashes(c *gin.Context) ([]Flash, error) {
 	session := Default(c)
+	if session.Get(flashSessionKey) == nil {
+		return nil, nil
+	}
 	flashes := flashes(session)
 	return flashes, session.Save()
 }

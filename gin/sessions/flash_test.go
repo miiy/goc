@@ -74,6 +74,48 @@ func TestFlashesReturnsAndClearsFlashes(t *testing.T) {
 	}
 }
 
+func TestFlashesDoesNotSaveWithoutFlash(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	session := newTestSession()
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Set(ginsessions.DefaultKey, session)
+
+	flashes, err := Flashes(c)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(flashes) != 0 {
+		t.Fatalf("unexpected flashes: %#v", flashes)
+	}
+	if session.saved {
+		t.Fatal("expected session not to be saved")
+	}
+}
+
+func TestFlashesSavesAfterDiscardingUnexpectedValues(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	session := newTestSession()
+	session.flashes[flashSessionKey] = []interface{}{"ignored"}
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Set(ginsessions.DefaultKey, session)
+
+	flashes, err := Flashes(c)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(flashes) != 0 {
+		t.Fatalf("unexpected flashes: %#v", flashes)
+	}
+	if _, exists := session.flashes[flashSessionKey]; exists {
+		t.Fatal("expected unexpected flash values to be cleared")
+	}
+	if !session.saved {
+		t.Fatal("expected cleared flash values to be saved")
+	}
+}
+
 func TestFlashesIgnoresUnexpectedValues(t *testing.T) {
 	session := newTestSession()
 	flash := Flash{Level: FlashLevelWarning, Message: "kept"}

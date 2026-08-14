@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type DB = gorm.DB
@@ -22,4 +23,8 @@ var ErrRecordNotFound = gorm.ErrRecordNotFound
 
 func Open(dialector gorm.Dialector, opts ...gorm.Option) (*DB, error) {
 	return gorm.Open(dialector, opts...)
+}
+
+func Expr(expr string, args ...interface{}) clause.Expr {
+	return gorm.Expr(expr, args...)
 }

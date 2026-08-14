@@ -21,7 +21,15 @@ func newTestSession() *testSession {
 func (s *testSession) ID() string { return s.id }
 
 func (s *testSession) Get(key interface{}) interface{} {
-	return s.values[key]
+	if value, ok := s.values[key]; ok {
+		return value
+	}
+	if flashKey, ok := key.(string); ok {
+		if value, exists := s.flashes[flashKey]; exists {
+			return value
+		}
+	}
+	return nil
 }
 
 func (s *testSession) Set(key interface{}, val interface{}) {

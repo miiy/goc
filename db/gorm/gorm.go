@@ -12,6 +12,10 @@ type Config = gorm.Config
 type Dialector = gorm.Dialector
 type Option = gorm.Option
 
+// Locking re-exports gorm.io/gorm/clause.Locking so callers can request row locks
+// (e.g. FOR UPDATE) without importing gorm.io/gorm/clause directly.
+type Locking = clause.Locking
+
 type Model struct {
 	ID        int64          `gorm:"column:id;primarykey"`
 	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime"`

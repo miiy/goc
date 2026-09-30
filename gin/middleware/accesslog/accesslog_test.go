@@ -263,3 +263,85 @@ func TestNewLogsOneEntryForRequestErrors(t *testing.T) {
 		t.Fatalf("errors field: got %q", errorsField)
 	}
 }
+
+func TestNewOmitsBodiesOverLogLimitWithoutChangingTraffic(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	log, logs := newTestLogger()
+	router := gin.New()
+	router.Use(New(
+		log,
+		WithRequestBodyLogging(true),
+		WithResponseBodyLogging(true),
+		WithMaxBodyLogBytes(4),
+	))
+	router.POST("/items", func(c *gin.Context) {
+		body, err := c.GetRawData()
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.String(http.StatusOK, string(body))
+	})
+
+	body := "request-body"
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/items", strings.NewReader(body)))
+
+	if recorder.Body.String() != body {
+		t.Fatalf("response body: got %q, want %q", recorder.Body.String(), body)
+	}
+	fields := logs.All()[0].ContextMap()
+	if _, ok := fields["request-body"]; ok {
+		t.Fatal("oversized request body should be omitted")
+	}
+	if _, ok := fields["response-body"]; ok {
+		t.Fatal("oversized response body should be omitted")
+	}
+}
+
+func TestNewUsesPathSanitizer(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	log, logs := newTestLogger()
+	router := gin.New()
+	router.Use(New(log, WithPathSanitizer(func(_ *gin.Context, _ string) string {
+		return "/sessions/****"
+	})))
+	router.DELETE("/sessions/:sid", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, "/sessions/secret?force=true", nil))
+
+	fields := logs.All()[0].ContextMap()
+	if fields["path"] != "/sessions/****" || fields["request_uri"] != "/sessions/****?force=true" {
+		t.Fatalf("sanitized path fields = %#v", fields)
+	}
+	if logs.All()[0].Message != "/sessions/****" {
+		t.Fatalf("log message = %q", logs.All()[0].Message)
+	}
+}
+
+func TestNewCanLeaveContextErrorLoggingToAnotherMiddleware(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	log, logs := newTestLogger()
+	router := gin.New()
+	router.Use(New(log, WithErrorLogging(false)))
+	router.GET("/items", func(c *gin.Context) {
+		_ = c.Error(errors.New("request failed"))
+		c.Status(http.StatusBadRequest)
+	})
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/items", nil))
+
+	entry := logs.All()[0]
+	if entry.Level != zapcore.InfoLevel {
+		t.Fatalf("log level: got %s, want %s", entry.Level, zapcore.InfoLevel)
+	}
+	if _, ok := entry.ContextMap()["errors"]; ok {
+		t.Fatal("errors field should be omitted")
+	}
+}

@@ -12,21 +12,31 @@ import (
 	"go.uber.org/zap"
 )
 
-const defaultShutdownTimeout = 5 * time.Second
+const (
+	defaultShutdownTimeout   = 5 * time.Second
+	defaultReadHeaderTimeout = 10 * time.Second
+	defaultIdleTimeout       = 120 * time.Second
+)
 
 type Server struct {
-	debug           bool
-	addr            string
-	shutdownTimeout time.Duration
-	engine          *gin.Engine
-	logger          *zap.Logger
+	debug             bool
+	addr              string
+	shutdownTimeout   time.Duration
+	readHeaderTimeout time.Duration
+	readTimeout       time.Duration
+	writeTimeout      time.Duration
+	idleTimeout       time.Duration
+	engine            *gin.Engine
+	logger            *zap.Logger
 }
 
 func New(opts ...Option) *Server {
 	s := &Server{
-		debug:           false,
-		addr:            "127.0.0.1:8080",
-		shutdownTimeout: defaultShutdownTimeout,
+		debug:             false,
+		addr:              "127.0.0.1:8080",
+		shutdownTimeout:   defaultShutdownTimeout,
+		readHeaderTimeout: defaultReadHeaderTimeout,
+		idleTimeout:       defaultIdleTimeout,
 	}
 
 	for _, opt := range opts {
@@ -76,8 +86,12 @@ func (s *Server) RunContext(ctx context.Context, addr ...string) error {
 	logger.Info("listening and serving HTTP", zap.String("addr", address))
 
 	srv := &http.Server{
-		Addr:    address,
-		Handler: s.engine,
+		Addr:              address,
+		Handler:           s.engine,
+		ReadHeaderTimeout: s.readHeaderTimeout,
+		ReadTimeout:       s.readTimeout,
+		WriteTimeout:      s.writeTimeout,
+		IdleTimeout:       s.idleTimeout,
 	}
 
 	serveErr := make(chan error, 1)

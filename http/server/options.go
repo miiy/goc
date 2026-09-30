@@ -44,3 +44,35 @@ func WithShutdownTimeout(timeout time.Duration) Option {
 		}
 	})
 }
+
+// WithReadHeaderTimeout limits the time to read request headers, mitigating
+// slowloris-style attacks. A non-positive value clears the timeout.
+func WithReadHeaderTimeout(timeout time.Duration) Option {
+	return optionFunc(func(opts *Server) {
+		opts.readHeaderTimeout = timeout
+	})
+}
+
+// WithReadTimeout limits the time to read the entire request, including the body.
+// A non-positive value clears the timeout.
+func WithReadTimeout(timeout time.Duration) Option {
+	return optionFunc(func(opts *Server) {
+		opts.readTimeout = timeout
+	})
+}
+
+// WithWriteTimeout limits the time to write the response. A non-positive value
+// clears the timeout.
+func WithWriteTimeout(timeout time.Duration) Option {
+	return optionFunc(func(opts *Server) {
+		opts.writeTimeout = timeout
+	})
+}
+
+// WithIdleTimeout limits the time a keep-alive connection waits for the next
+// request. A non-positive value clears the timeout.
+func WithIdleTimeout(timeout time.Duration) Option {
+	return optionFunc(func(opts *Server) {
+		opts.idleTimeout = timeout
+	})
+}

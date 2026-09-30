@@ -11,6 +11,19 @@ import (
 	"go.uber.org/zap"
 )
 
+func TestNewAppliesHTTPTimeoutOptions(t *testing.T) {
+	server := New(
+		WithReadHeaderTimeout(time.Second),
+		WithReadTimeout(2*time.Second),
+		WithWriteTimeout(3*time.Second),
+		WithIdleTimeout(4*time.Second),
+	)
+
+	if server.readHeaderTimeout != time.Second || server.readTimeout != 2*time.Second || server.writeTimeout != 3*time.Second || server.idleTimeout != 4*time.Second {
+		t.Fatalf("server timeouts = %+v", server)
+	}
+}
+
 func TestHandlerServesRegisteredRoutes(t *testing.T) {
 	server := New(WithLogger(zap.NewNop()))
 	server.RegisterRouter(func(r *gin.Engine) {

@@ -13,21 +13,44 @@ import (
 
 type responseBodyWriter struct {
 	gin.ResponseWriter
-	body *bytes.Buffer
+	body         *bytes.Buffer
+	bodyLimit    int64
+	bodyTooLarge bool
 }
 
 func (w *responseBodyWriter) Write(b []byte) (int, error) {
-	if count, err := w.body.Write(b); err != nil {
-		return count, err
-	}
+	w.capture(b)
 	return w.ResponseWriter.Write(b)
 }
 
 func (w *responseBodyWriter) WriteString(s string) (int, error) {
-	if _, err := w.body.WriteString(s); err != nil {
-		return 0, err
-	}
+	w.capture([]byte(s))
 	return w.ResponseWriter.WriteString(s)
+}
+
+func (w *responseBodyWriter) capture(body []byte) {
+	if w.bodyLimit <= 0 {
+		_, _ = w.body.Write(body)
+		return
+	}
+	remaining := w.bodyLimit - int64(w.body.Len())
+	if remaining <= 0 {
+		w.bodyTooLarge = w.bodyTooLarge || len(body) > 0
+		return
+	}
+	if int64(len(body)) > remaining {
+		_, _ = w.body.Write(body[:remaining])
+		w.bodyTooLarge = true
+		return
+	}
+	_, _ = w.body.Write(body)
+}
+
+const maxInt64 = int64(^uint64(0) >> 1)
+
+type replayBody struct {
+	io.Reader
+	io.Closer
 }
 
 // RequestBodySanitizer returns the representation of a request body to include
@@ -38,12 +61,18 @@ type RequestBodySanitizer func(c *gin.Context, body []byte) ([]byte, error)
 // include in logs. Returning nil omits the response-body field.
 type ResponseBodySanitizer func(c *gin.Context, body []byte) ([]byte, error)
 
+// PathSanitizer returns the request path representation to include in logs.
+type PathSanitizer func(c *gin.Context, path string) string
+
 type config struct {
 	logRequestBody           bool
 	logResponseBody          bool
+	logErrors                bool
+	maxBodyLogBytes          int64
 	excludedBodyPathPrefixes []string
 	requestBodySanitizer     RequestBodySanitizer
 	responseBodySanitizer    ResponseBodySanitizer
+	pathSanitizer            PathSanitizer
 }
 
 // Option configures access logging.
@@ -60,6 +89,21 @@ func WithRequestBodyLogging(enabled bool) Option {
 func WithResponseBodyLogging(enabled bool) Option {
 	return func(config *config) {
 		config.logResponseBody = enabled
+	}
+}
+
+// WithErrorLogging controls whether context errors are attached and logged at Error level.
+func WithErrorLogging(enabled bool) Option {
+	return func(config *config) {
+		config.logErrors = enabled
+	}
+}
+
+// WithMaxBodyLogBytes omits request or response bodies larger than the supplied limit.
+// A non-positive value preserves unlimited body logging for backward compatibility.
+func WithMaxBodyLogBytes(maxBytes int64) Option {
+	return func(config *config) {
+		config.maxBodyLogBytes = maxBytes
 	}
 }
 
@@ -88,11 +132,19 @@ func WithResponseBodySanitizer(sanitizer ResponseBodySanitizer) Option {
 	}
 }
 
+// WithPathSanitizer transforms the request path representation written to logs.
+func WithPathSanitizer(sanitizer PathSanitizer) Option {
+	return func(config *config) {
+		config.pathSanitizer = sanitizer
+	}
+}
+
 // New returns middleware that records request and response access details.
 func New(log logger.Logger, options ...Option) gin.HandlerFunc {
 	config := config{
 		logRequestBody:  false,
 		logResponseBody: false,
+		logErrors:       true,
 		excludedBodyPathPrefixes: []string{
 			"/uploads/",
 		},
@@ -108,19 +160,20 @@ func New(log logger.Logger, options ...Option) gin.HandlerFunc {
 
 		var requestLogBody []byte
 		if config.shouldLogRequestBody(c.Request.URL.Path) {
-			requestBody, err := io.ReadAll(c.Request.Body)
+			requestBody, tooLarge, restoredBody, err := captureRequestBody(c.Request.Body, config.maxBodyLogBytes)
+			c.Request.Body = restoredBody
 			if err != nil {
 				log.Error("failed to read request body", logzap.Error(err))
-			} else {
+			} else if !tooLarge {
 				requestLogBody = requestBody
 				if config.requestBodySanitizer != nil {
 					requestLogBody, err = config.requestBodySanitizer(c, requestBody)
 					if err != nil {
 						log.Warn("failed to sanitize request body", logzap.Error(err))
+						requestLogBody = nil
 					}
 				}
 			}
-			c.Request.Body = io.NopCloser(bytes.NewReader(requestBody))
 		}
 
 		var responseWriter *responseBodyWriter
@@ -128,6 +181,7 @@ func New(log logger.Logger, options ...Option) gin.HandlerFunc {
 			responseWriter = &responseBodyWriter{
 				ResponseWriter: c.Writer,
 				body:           &bytes.Buffer{},
+				bodyLimit:      config.maxBodyLogBytes,
 			}
 			c.Writer = responseWriter
 		}
@@ -136,12 +190,21 @@ func New(log logger.Logger, options ...Option) gin.HandlerFunc {
 
 		endTime := time.Now()
 		latency := endTime.Sub(startTime)
+		path := c.Request.URL.Path
+		if config.pathSanitizer != nil {
+			path = config.pathSanitizer(c, path)
+		}
+		requestURI := path
+		if c.Request.URL.RawQuery != "" {
+			requestURI += "?" + c.Request.URL.RawQuery
+		}
 		fields := []logzap.Field{
 			logzap.String("time", endTime.UTC().Format(time.RFC3339)),
 			logzap.String("method", c.Request.Method),
 			logzap.String("host", c.Request.Host),
-			logzap.String("path", c.Request.URL.Path),
+			logzap.String("path", path),
 			logzap.String("query", c.Request.URL.RawQuery),
+			logzap.String("request_uri", requestURI),
 			logzap.String("full-path", c.FullPath()),
 			logzap.String("ip", c.ClientIP()),
 			logzap.String("remote-addr", c.Request.RemoteAddr),
@@ -152,6 +215,7 @@ func New(log logger.Logger, options ...Option) gin.HandlerFunc {
 			logzap.Int("status", c.Writer.Status()),
 			logzap.Int("size", c.Writer.Size()),
 			logzap.Duration("latency", latency),
+			logzap.Int64("latency-us", latency.Microseconds()),
 		}
 		if requestID := c.Writer.Header().Get("X-Request-Id"); requestID != "" {
 			fields = append(fields, logzap.String("request-id", requestID))
@@ -159,7 +223,7 @@ func New(log logger.Logger, options ...Option) gin.HandlerFunc {
 		if config.shouldLogRequestBody(c.Request.URL.Path) && requestLogBody != nil {
 			fields = append(fields, logzap.ByteString("request-body", requestLogBody))
 		}
-		if responseWriter != nil {
+		if responseWriter != nil && !responseWriter.bodyTooLarge {
 			responseLogBody := responseWriter.body.Bytes()
 			if config.responseBodySanitizer != nil {
 				var err error
@@ -173,13 +237,33 @@ func New(log logger.Logger, options ...Option) gin.HandlerFunc {
 				fields = append(fields, logzap.ByteString("response-body", responseLogBody))
 			}
 		}
-		if len(c.Errors) > 0 {
+		if config.logErrors && len(c.Errors) > 0 {
 			fields = append(fields, logzap.String("errors", c.Errors.String()))
-			log.Error(c.Request.URL.Path, fields...)
+			log.Error(path, fields...)
 			return
 		}
-		log.Info(c.Request.URL.Path, fields...)
+		log.Info(path, fields...)
 	}
+}
+
+func captureRequestBody(body io.ReadCloser, limit int64) ([]byte, bool, io.ReadCloser, error) {
+	if body == nil {
+		return nil, false, nil, nil
+	}
+	var reader io.Reader = body
+	if limit > 0 {
+		captureLimit := limit
+		if captureLimit < maxInt64 {
+			captureLimit++
+		}
+		reader = io.LimitReader(body, captureLimit)
+	}
+	captured, err := io.ReadAll(reader)
+	restored := &replayBody{
+		Reader: io.MultiReader(bytes.NewReader(captured), body),
+		Closer: body,
+	}
+	return captured, limit > 0 && int64(len(captured)) > limit, restored, err
 }
 
 func (config config) shouldLogRequestBody(path string) bool {
